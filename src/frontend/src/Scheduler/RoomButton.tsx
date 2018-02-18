@@ -25,7 +25,7 @@ export class RoomButton extends React.Component<Props, {}> {
 				else
 					return (<div>{resource.count + ' ' + resource.name}<br/></div>);
 			})}
-			Index (for testing): {this.props.index}</button>
+			</button>
 			);
 		else
 			return (
