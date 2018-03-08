@@ -5,6 +5,7 @@ import { NavigationBar } from './Navigation/NavigationBar';
 import { Scheduler } from './Scheduler/Scheduler';
 import { ViewingCalendar } from './Home/ViewingCalendar';
 import { Administration } from './Administration/Administration';
+import { ManageTeacherClasses } from './ManageClasses/ManageTeacherClasses';
 import { Alert } from './Generic/Alert';
 import { Loading } from './Generic/Loading';
 import { NotFound } from './Generic/NotFound';
@@ -87,7 +88,7 @@ class App extends React.Component<{}, State> {
 					<ViewingCalendar cwid={this.state.cwid || 0} role={this.state.role || ''} handleActiveRouteChange={this.handleActiveRouteChange} />
 				</ Route>
 			),
-			(<Route key="/classes" path="/classes" component={() => <div>Create Manage Classes Component!</div>} />)
+			(<Route key="/classes" path="/classes" component={ManageTeacherClasses} />)
 		];
 
 		if (this.state.role === 'instructor' || this.state.role === 'administrator')
