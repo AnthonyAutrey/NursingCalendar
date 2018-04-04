@@ -16,9 +16,9 @@ $app->put('/locations', function (Request $request, Response $response, array $a
 	foreach ($queryDataArray as $queryData) {
 		$queryData = getInsertQueryData($request);
 		$queryString = DBUtil::buildInsertQuery('locations', $queryData['insertValues']);
-		$results[$queryData['insertValues']] = DBUtil::runCommand($queryString);
+		array_push($results, DBUtil::runCommand($queryString));
 	}
-	$response->getBody()->write($results);
+	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 })->add($requireAdmin);
