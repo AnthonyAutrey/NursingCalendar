@@ -23,7 +23,7 @@ CREATE TABLE Rooms
 	Capacity SmallInt, -- if NULL, room should be regarded as having infinite capacity
 	LocationName varchar(60) NOT NULL,
 	PRIMARY KEY (RoomName, LocationName),
-	FOREIGN KEY (LocationName) REFERENCES Locations(LocationName)
+	FOREIGN KEY (LocationName) REFERENCES Locations(LocationName) ON UPDATE CASCADE
 );
 
 CREATE TABLE Resources
@@ -123,9 +123,9 @@ CREATE TABLE RoomResourceRelation
 	ResourceName varchar(60) NOT NULL,
 	Count SmallInt, -- if NULL, this resource isn't countable (example: AV capability)
 	PRIMARY KEY (LocationName, RoomName, ResourceName),
-	FOREIGN KEY (LocationName) REFERENCES Locations(LocationName),
-	FOREIGN KEY (RoomName) REFERENCES Rooms(RoomName),
-	FOREIGN KEY (ResourceName) REFERENCES Resources(ResourceName)
+	FOREIGN KEY (LocationName) REFERENCES Locations(LocationName) ON UPDATE CASCADE,
+	FOREIGN KEY (RoomName) REFERENCES Rooms(RoomName) ON UPDATE CASCADE,
+	FOREIGN KEY (ResourceName) REFERENCES Resources(ResourceName) ON UPDATE CASCADE
 );
 
 CREATE TABLE EventGroupRelation
@@ -134,8 +134,8 @@ CREATE TABLE EventGroupRelation
 	LocationName varchar(60) NOT NULL,
 	RoomName varchar(60) NOT NULL,
 	GroupName VARCHAR(60) NOT NULL,
-	PRIMARY KEY (EventID, LocationName, RoomName, GroupName),
-	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName),
+	PRIMARY KEY (EventID, LocationName, RoomName, GroupName), 
+	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName) ON UPDATE CASCADE,
 	FOREIGN KEY (GroupName) REFERENCES Groups(GroupName) ON UPDATE CASCADE
 );
 
@@ -148,7 +148,7 @@ CREATE TABLE UserGroupRelation
 	FOREIGN KEY (GroupName) REFERENCES Groups(GroupName) ON UPDATE CASCADE
 );
 
-CREATE TABLE RecurrringEventRelation
+CREATE TABLE RecurringEventRelation
 (
 	RecurringID CHAR(36) NOT NULL, -- uuid
 	EventID INT NOT NULL,
