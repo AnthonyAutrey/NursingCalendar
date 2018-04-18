@@ -83,7 +83,6 @@ $app->get('/semestergroups', function (Request $request, Response $response, arr
 
 })->add($requireAnyRole);
 
-
 // Update //
 $app->post('/groups', function (Request $request, Response $response, array $args) {
 	$results = [];

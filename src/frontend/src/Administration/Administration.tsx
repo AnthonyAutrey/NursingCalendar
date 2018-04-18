@@ -7,6 +7,7 @@ import { LogViewer } from './LogViewer';
 
 interface Props {
 	handleShowAlert: Function;
+	cwid: string;
 }
 
 interface State {
@@ -63,7 +64,7 @@ export class Administration extends React.Component<Props, State> {
 					Archive Events
 				</button>
 				<div className={this.state.showArchive ? '' : 'd-none'}>
-					<Archive handleShowAlert={this.props.handleShowAlert} />
+					<Archive cwid={this.props.cwid} handleShowAlert={this.props.handleShowAlert} />
 				</div>
 			</div>
 		);
