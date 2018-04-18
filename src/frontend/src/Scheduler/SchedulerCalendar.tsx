@@ -489,8 +489,32 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	handleEventDeletion = (eventID: number) => {
 		let events = this.cloneStateEvents();
-		events.delete(eventID);
-		this.setState({ events: events });
+		let eventToDelete = events.get(eventID);
+		if (eventToDelete && eventToDelete.recurringInfo) {
+			if (confirm('recurring. delete all?'))
+				this.deleteEntireRecurringEvent(eventToDelete);
+			else {
+				events.delete(eventID);
+				this.setState({ events: events });
+			}
+		} else {
+			events.delete(eventID);
+			this.setState({ events: events });
+		}
+
+	}
+
+	deleteEntireRecurringEvent = (event: Event) => {
+		if (event.recurringInfo) {
+			let recurringID = event.recurringInfo.id;
+			let eventMap = this.cloneStateEvents();
+			let events = this.getStateEventsAsArray().forEach(stateEvent => {
+				if (stateEvent.recurringInfo && stateEvent.recurringInfo.id === recurringID)
+					eventMap.delete(stateEvent.id);
+			});
+
+			this.setState({ events: eventMap });
+		}
 	}
 
 	handleEventClick = (event: any, jsEvent: any, view: any) => {
@@ -592,8 +616,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			return;
 		}
 
-		if (event.recurringInfo)
-			alert(event.recurringInfo.id);
 		// prevent event from being edited to less than 30 minutes in duration
 		let start: Moment = moment(event.start);
 		let end: Moment = moment(event.end);
