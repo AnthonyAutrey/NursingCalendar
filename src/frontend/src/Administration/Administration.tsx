@@ -2,6 +2,7 @@ import * as React from 'react';
 import { PublishPeriod } from './PublishPeriod';
 import { Archive } from './Archive';
 import { ManageUsers } from './ManageUsers';
+import { ManageGroups } from './ManageGroups';
 import { LogViewer } from './LogViewer';
 import { ManageRooms } from './ManageRooms';
 import { ManageResources } from './ManageResources';
@@ -15,10 +16,11 @@ interface State {
 	showPublishPeriod: boolean;
 	showArchive: boolean;
 	showManageInstructors: boolean;
-	showLogViewer: boolean;
 	showManageRooms: boolean;
 	showManageResources: boolean;
 	showManageLocations: boolean;
+	showManageGroups: boolean;
+	showLogViewer: boolean;
 }
 
 export class Administration extends React.Component<Props, State> {
@@ -28,10 +30,11 @@ export class Administration extends React.Component<Props, State> {
 			showPublishPeriod: false,
 			showArchive: false,
 			showManageInstructors: false,
-			showLogViewer: false,
 			showManageRooms: false,
 			showManageResources: false,
-			showManageLocations: false
+			showManageLocations: false,
+			showManageGroups: false,
+			showLogViewer: false
 		};
 	}
 
@@ -68,9 +71,12 @@ export class Administration extends React.Component<Props, State> {
 				<div className={this.state.showManageLocations ? '' : 'd-none'}>
 					<ManageLocations />
 				</div>
-				<button className="btn btn-primary btn-block mb-2" >
+				<button onClick={() => this.setState({ showManageGroups: !this.state.showManageGroups })} className="btn btn-primary btn-block mb-2" >
 					Manage Groups
 				</button>
+				<div className={this.state.showManageGroups ? '' : 'd-none'}>
+					<ManageGroups handleShowAlert={this.props.handleShowAlert} />
+				</div>
 				<button onClick={() => this.setState({ showLogViewer: !this.state.showLogViewer })} className="btn btn-primary btn-block mb-2" >
 					Event Logs
 				</button>
