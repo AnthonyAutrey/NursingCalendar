@@ -7,6 +7,7 @@ var cal = archiveGenerator.ics();
 
 interface Props {
 	handleShowAlert: Function;
+	cwid: string;
 }
 
 interface State {
@@ -114,7 +115,6 @@ export class Archive extends React.Component<Props, State> {
 					let filteredEvents = this.filterEventsByDate(events);
 					this.deleteArchivedEventsInDB(filteredEvents).then(() => {
 						this.createAndDownloadArchive(filteredEvents);
-						this.props.handleShowAlert('success', 'Successfully archived events!');
 					}).catch(() => {
 						this.props.handleShowAlert('error', 'Error archiving events.');
 					});
@@ -124,8 +124,11 @@ export class Archive extends React.Component<Props, State> {
 	}
 
 	createAndDownloadArchive = (events: Event[]) => {
-		if (events.length < 1)
+		console.log(events);
+		if (events.length < 1) {
 			this.props.handleShowAlert('error', 'No events found during selected period!');
+			return;
+		}
 
 		events.forEach(event => {
 			let description = 'Owner: ' + event.ownerName + ', Description: ' +
@@ -139,7 +142,22 @@ export class Archive extends React.Component<Props, State> {
 			cal.download('nursingCalendarArchive_FROM--' + this.state.archiveStartDate + '_TO--' + this.state.archiveEndDate);
 			// reset cal to clear events
 			cal = archiveGenerator.ics();
+			this.props.handleShowAlert('success', 'Successfully archived events!');
+			this.logEventArchival();
 		}
+	}
+
+	logEventArchival = () => {
+		let queryData = {
+			insertValues: {
+				CWID: this.props.cwid,
+				Message: 'Events Archived',
+				Details: 'Archival Period: from ' + this.state.archiveStartDate + ' to ' + this.state.archiveEndDate + '.'
+			}
+		};
+
+		let queryDataString = JSON.stringify(queryData);
+		request.put('/api/logs').set('queryData', queryDataString).end();
 	}
 
 	deleteArchivedEventsInDB = (events: Event[]): Promise<null> => {

@@ -38,3 +38,29 @@ $app->get('/users', function (Request $request, Response $response, array $args)
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;	
 })->add($requireAnyRole);
+
+// Update //
+$app->post('/users', function (Request $request, Response $response, array $args) {
+	$results = [];
+	$queryDataArray = getUpdateQueryData($request);
+
+	if (array_key_exists("setValues",$queryDataArray) && array_key_exists("where",$queryDataArray))
+		$queryDataArray = [$queryDataArray];
+
+	foreach ($queryDataArray as $queryData) {
+		// return with 'bad request' response if request isn't correct
+		if (!isset($queryData['setValues']) ||
+			!count($queryData['setValues']) > 0 ||
+			!isset($queryData['where'])
+			) {
+			return $response->withStatus(400);
+		}
+	
+		$queryString = DBUtil::buildUpdateQuery('users', $queryData['setValues'], $queryData['where']);	
+		array_push($results, DBUtil::runCommand($queryString));
+	}
+
+	$response->getBody()->write(json_encode($results));
+	$response = $response->withHeader('Content-type', 'application/json');
+	return $response;
+})->add($requireAdmin);

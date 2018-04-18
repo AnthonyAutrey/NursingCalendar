@@ -245,6 +245,7 @@ export class CreateEventModal extends React.Component<Props, State> {
 		let recurringInfo: RecurringEventInfo | undefined = undefined;
 		if (this.state.repeatType !== 'none')
 			recurringInfo = {
+				id: uuid(),
 				type: this.state.repeatType,
 				monthlyDay: RecurringEvents.getWeekDayCount(this.state.eventStart) + RecurringEvents.getDayOfWeekChar(this.state.eventStart),
 				weeklyDays: this.state.repeatType === 'weekly' ? this.state.repeatDaysForWeekly : undefined,

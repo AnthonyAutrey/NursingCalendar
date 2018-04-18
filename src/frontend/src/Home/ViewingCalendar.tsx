@@ -184,6 +184,7 @@ export class ViewingCalendar extends React.Component<Props, State> {
 						this.setState({ events: this.parseDBEvents(res.body), loading: false });
 					}).catch(() => {
 						alert('Error getting data!, Handle properly!');
+
 						// TODO: handle this properly
 					});
 				} else
@@ -641,7 +642,9 @@ export class ViewingCalendar extends React.Component<Props, State> {
 			passedGroupFilter &&
 			passedLocationFilter &&
 			(passedRoomFilter || this.state.roomFilter === '')))
-			element.css('display', 'none');
+			return false;
+
+		return true;
 	}
 }
 

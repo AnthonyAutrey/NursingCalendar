@@ -9,6 +9,7 @@ interface Props {
 	handleChangeGroups: Function;
 	handleAddGroup: Function;
 	handleDeleteGroup: Function;
+	handleChangeIsAdmin: Function;
 	userRole: 'student' | 'instructor';
 }
 
@@ -64,13 +65,37 @@ export class UserGroupsSelector extends React.Component<Props, {}> {
 
 		let labelText = this.props.userRole === 'instructor' ? 'Schedulable Groups:' : 'Viewable Groups:';
 
-		return (
-			<div className="form-group row">
-				<label className="col-lg-4 col-form-label text-left">{labelText}</label>
-				<div className="col-lg-8">
-					{selectors}
-					{addButton}
+		let makeAdminForm = null;
+		if (this.props.userRole === 'instructor')
+			makeAdminForm = (
+				<div className="form-group row">
+					<label className="col-lg-4 col-form-label text-left">Make Instructor an Admin:</label>
+					<div className="col-lg-8">
+						<div className="d-flex flex-wrap form-control" style={{ border: 'none' }}>
+							<input
+								style={{ position: 'relative', top: '6px', left: -13 }}
+								type="checkbox"
+								checked={this.props.user.isAdmin}
+								onChange={(e) => this.props.handleChangeIsAdmin(e)}
+							/>
+							<p className="ml-1">{this.props.user.isAdmin ? '(Admin)' : '(Not Admin)'}</p>
+						</div>
+					</div>
 				</div>
+			);
+
+		return (
+			<div>
+				{makeAdminForm}
+				{this.props.user.isAdmin === false &&
+					<div className="form-group row">
+						<label className="col-lg-4 col-form-label text-left">{labelText}</label>
+						<div className="col-lg-8">
+							{selectors}
+							{addButton}
+						</div>
+					</div>
+				}
 			</div>
 		);
 	}

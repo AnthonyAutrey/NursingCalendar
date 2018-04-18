@@ -93,7 +93,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				let groups: string[] = [];
 				res.body.forEach((group: any) => {
 					groups.push(group.GroupName);
-					this.groupSemesterMap.set(group.GroupName, group.Semester);
 				});
 
 				this.setState({ groupOptionsFromAPI: groups });
@@ -183,16 +182,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					allDaySlot={false}
 					eventOverlap={false}
 					eventRender={(event: any, element: any, view: any) => {
-						let groups = event.groups;
-						let semester = 'none';
-						let semesterFromMap: any = 'none';
-						if (groups && groups.length === 1) {
-							semesterFromMap = this.groupSemesterMap.get(groups[0]);
-
-							if (semesterFromMap)
-								semester = semesterFromMap;
-						}
-
 						let stripeColor = '(255, 255, 255, 0.1)';
 						if (this.currentView === 'month')
 							stripeColor = '(255, 255, 255, 0.2)';
@@ -213,10 +202,14 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 							'Semester 5': 'repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba' + stripeColor +
 								' 4px,rgba' + stripeColor + ' 6px)'
 						};
-						let bgCSS = semesterCSSMap[semester];
 
-						element.css('background', bgCSS);
+						let groups = event.groups;
+						if (groups && Number(groups.length) === 1) {
+							let bgCSS = semesterCSSMap[this.groupSemesterMap.get(groups[0]) || 'none'];
+							element.css('background', bgCSS);
+						}
 						element.css('background-color', event.color);
+
 					}}
 					displayEventEnd={this.currentView !== 'month'}
 					timeFormat={'h(:mm)t'} // uppercase H for 24-hour clock
@@ -338,14 +331,12 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				return;
 		}
 
-		console.log(conflictingEvents);
 		filteredRecurringEvents.forEach(event => {
 			index++;
 			event.id = index;
 			events.set(index, event);
 		});
 
-		console.log(events);
 		this.setState({ events: events }, () => this.closeEventCreationModal());
 	}
 
@@ -440,9 +431,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		let conflictingEvents: Event[] = [];
 
 		let filteredEvents = events.filter(recurringEvent => {
-			console.log('recurringEvent................................');
-			console.log(recurringEvent);
-
 			if (recurringEvent.start.substr(recurringEvent.start.length - 1, 1) !== 'Z')
 				recurringEvent.start += '.000Z';
 			if (recurringEvent.end.substr(recurringEvent.end.length - 1, 1) !== 'Z')
@@ -450,26 +438,16 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let recurringEventStart = moment(recurringEvent.start);
 			let recurringEventEnd = moment(recurringEvent.end);
-			console.log(recurringEvent.start);
-			console.log(recurringEventStart.toISOString());
-			console.log(recurringEvent.end);
-			console.log(recurringEventEnd.toISOString());
-			console.log('..............................................');
+
 			let noConflicts = true;
 			this.getStateEventsAsArray().forEach((stateEvent: Event) => {
 				if (stateEvent.start.substr(stateEvent.start.length - 1, 1) !== 'Z')
 					stateEvent.start += '.000Z';
 				if (stateEvent.end.substr(stateEvent.end.length - 1, 1) !== 'Z')
 					stateEvent.end += '.000Z';
-				console.log('stateEvent');
-				console.log(stateEvent);
-				console.log(stateEvent.start);
-				console.log(moment(stateEvent.start).utc().toISOString());
-				console.log(stateEvent.end);
-				console.log(moment(stateEvent.end).utc().toISOString());
+
 				if (recurringEventStart.isBefore(moment(stateEvent.end).utc()) &&
 					recurringEventEnd.isAfter(moment(stateEvent.start).utc())) {
-					console.log('CONFLICT CONFLICT CONFLICT');
 					conflictingEvents.push(stateEvent);
 					noConflicts = false;
 				}
@@ -495,7 +473,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	handleEventModify = (eventID: number, title: string, description: string, groups: string[]) => {
 		let events = this.cloneStateEvents();
 		let eventToModify = events.get(eventID);
-		let color = '';
+		let color = '#800029';
 		if (groups.length === 1)
 			color = ColorGenerator.getColor(groups[0]);
 
@@ -609,6 +587,13 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	editEvent(event: Event, delta: Duration): void {
+		if (event.recurringInfo && !confirm('This is a recurring event. Do you want to continue this action and make the event independent?')) {
+			this.forceUpdate();
+			return;
+		}
+
+		if (event.recurringInfo)
+			alert(event.recurringInfo.id);
 		// prevent event from being edited to less than 30 minutes in duration
 		let start: Moment = moment(event.start);
 		let end: Moment = moment(event.end);
@@ -620,6 +605,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		editedEvent.title = event.title;
 		editedEvent.start = start.toISOString();
 		editedEvent.end = end.toISOString();
+		editedEvent.recurringInfo = undefined;
 		let index: number | string = event.id;
 		let events = this.cloneStateEvents();
 

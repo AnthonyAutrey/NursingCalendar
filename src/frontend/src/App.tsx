@@ -112,7 +112,7 @@ class App extends React.Component<{}, State> {
 			routes.push(
 				(
 					<Route key="/administration" path="/administration">
-						<Administration handleShowAlert={this.handleShowAlert} />
+						<Administration cwid={Number(this.state.cwid).toString() || ''} handleShowAlert={this.handleShowAlert} />
 					</Route>
 				)
 			);

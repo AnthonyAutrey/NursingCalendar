@@ -21,15 +21,15 @@ export class Alert extends React.Component<{}, State> {
 		if (!this.state.show)
 			return null;
 
-		let className = 'bg-light border-bottom rounded p-1 m-0 d-flex';
+		let className = 'bg-light border-bottom rounded m-0 d-flex w-100';
 		if (this.state.style === 'error')
-			className = 'bg-light text-danger border-bottom border-danger rounded p-1 m-0 d-flex';
+			className = 'bg-light text-danger border-bottom border-danger rounded m-0 d-flex w-100';
 		if (this.state.style === 'success')
-			className = 'bg-light text-success border-bottom border-success rounded  p-1 m-0 d-flex';
+			className = 'bg-light text-success border-bottom border-success rounded m-0 d-flex w-100';
 
 		return (
-			<div className={className}>
-				<div className="w-100 align-self-center text-center">
+			<div className={className} style={{ position: 'fixed', top: '0px', zIndex: 9999999, fontSize: '1.1em' }}>
+				<div className="w-100 align-self-center text-center py-2">
 					{this.state.message}
 				</div>
 			</div>
@@ -38,7 +38,7 @@ export class Alert extends React.Component<{}, State> {
 
 	public display = (style: 'success' | 'error', message: string) => {
 		this.setState({ show: true, style: style, message: message });
-		setTimeout(() => this.close(), 3000);
+		setTimeout(() => this.close(), 5000);
 	}
 
 	private close = () => {

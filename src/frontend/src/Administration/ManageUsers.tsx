@@ -12,6 +12,7 @@ export interface User {
 	cwid: string;
 	name: string;
 	groups: Group[];
+	isAdmin: boolean;
 }
 
 interface Props {
@@ -51,6 +52,7 @@ export class ManageUsers extends React.Component<Props, State> {
 		});
 
 		let selectedUser = this.getSelectedUser();
+		console.log(selectedUser);
 
 		let userGroupsSelector = null;
 		if (selectedUser)
@@ -61,6 +63,7 @@ export class ManageUsers extends React.Component<Props, State> {
 					handleChangeGroups={this.handleChangeGroups}
 					handleAddGroup={this.handleAddGroup}
 					handleDeleteGroup={this.handleDeleteGroup}
+					handleChangeIsAdmin={this.handleChangeIsAdmin}
 					userRole={this.props.userRole}
 				/>
 			);
@@ -78,13 +81,16 @@ export class ManageUsers extends React.Component<Props, State> {
 						<div className="form-group row">
 							<label className="col-lg-4 col-form-label text-left">{labelText}</label>
 							<div className="col-lg-8">
-								<select
-									className="form-control"
-									value={this.state.selectedUserCWID}
-									onChange={this.handleSelectedUserChange}
-								>
-									{userOptions}
-								</select>
+								{
+									this.state.users.length <= 0 ? '(No instructors available to select)' :
+										<select
+											className="form-control"
+											value={this.state.selectedUserCWID}
+											onChange={this.handleSelectedUserChange}
+										>
+											{userOptions}
+										</select>
+								}
 							</div>
 						</div>
 						<hr />
@@ -93,7 +99,7 @@ export class ManageUsers extends React.Component<Props, State> {
 						<div className="row">
 							<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
 								Submit Changes
-								</button>
+							</button>
 						</div>
 					</div>
 				</div>
@@ -119,17 +125,17 @@ export class ManageUsers extends React.Component<Props, State> {
 		});
 	}
 
-	parseUsers = (dBusers: any[]) => {
+	parseUsers = (dbUsers: any[]) => {
 		let users: User[] = [];
 
-		dBusers.forEach(dBinst => {
+		dbUsers.forEach(dBinst => {
 			let groups: Group[] = [];
-			let dBGroups = Object.keys(dBinst.Groups);
-			dBGroups.forEach((dBGroupKey: any) => {
-				let dBGroup = dBinst.Groups[dBGroupKey];
+			let dbGroups = Object.keys(dBinst.Groups);
+			dbGroups.forEach((dbGroupKey: any) => {
+				let dbGroup = dBinst.Groups[dbGroupKey];
 				let group: Group = {
-					name: dBGroup.Name,
-					description: dBGroup.Description
+					name: dbGroup.Name,
+					description: dbGroup.Description
 				};
 				groups.push(group);
 			});
@@ -137,7 +143,8 @@ export class ManageUsers extends React.Component<Props, State> {
 			let user: User = {
 				cwid: dBinst.CWID,
 				name: dBinst.FirstName + ' ' + dBinst.LastName,
-				groups: groups
+				groups: groups,
+				isAdmin: false
 			};
 			users.push(user);
 		});
@@ -177,6 +184,18 @@ export class ManageUsers extends React.Component<Props, State> {
 		let userCWID = event.target.value;
 
 		this.setState({ selectedUserCWID: userCWID });
+	}
+
+	handleChangeIsAdmin = (event: any) => {
+		let isAdmin = event.target.checked;
+
+		let user = this.getSelectedUser();
+		let users = this.state.users;
+		if (user) {
+			user.isAdmin = isAdmin;
+			users[this.getSelectedUserIndex()] = user;
+			this.setState({ users: users });
+		}
 	}
 
 	handleChangeGroups = (event: any, index: number) => {
@@ -246,7 +265,39 @@ export class ManageUsers extends React.Component<Props, State> {
 	// Persist Changes ////////////////////////////////////////////////////////////////////////////////////////////////////
 	handlePersistChanges = () => {
 		this.deleteUserGroups().then(() => {
+			Promise.all([this.persistUserGroups(), this.persistMakeAdmin()]).then(() => {
+				let users = this.state.users.slice(0);
+				users = users.filter(user => {
+					return !user.isAdmin;
+				});
 
+				let selectedUser = users.find(user => {
+					if (user.cwid === this.state.selectedUserCWID)
+						return true;
+					else
+						return false;
+				});
+
+				let selectedUserCWID = '';
+				if (users.length > 0)
+					selectedUserCWID = users[0].cwid.toString();
+
+				if (selectedUser)
+					this.setState({ users: users });
+				else
+					this.setState({ users: users, selectedUserCWID: selectedUserCWID });
+
+				this.props.handleShowAlert('success', 'Successfully submitted changes!');
+			}).catch(() => {
+				this.props.handleShowAlert('error', 'Error submitting changes. (catch promises)');
+			});
+		}).catch(() => {
+			this.props.handleShowAlert('error', 'Error submitting changes.');
+		});
+	}
+
+	persistUserGroups = (): Promise<null> => {
+		return new Promise((resolve, reject) => {
 			let cwids: string[] = [];
 			let groups: string[] = [];
 			this.state.users.forEach(user => {
@@ -266,13 +317,42 @@ export class ManageUsers extends React.Component<Props, State> {
 			let queryDataString = JSON.stringify(queryData);
 			request.put('/api/usergroups').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (res && res.body)
-					this.props.handleShowAlert('success', 'Sucessfully submitted changes!');
+					resolve();
 				else
-					this.props.handleShowAlert('error', 'Error submitting changes.');
+					reject();
+			});
+		});
+	}
+
+	persistMakeAdmin = (): Promise<null> => {
+		return new Promise((resolve, reject) => {
+			let newAdmins = this.state.users.filter(user => {
+				return user.isAdmin;
 			});
 
-		}).catch(() => {
-			this.props.handleShowAlert('error', 'Error submitting changes.');
+			if (newAdmins.length <= 0)
+				resolve();
+
+			let newAdminCWIDS = newAdmins.map(newAdmin => {
+				return newAdmin.cwid;
+			});
+
+			let queryData = {
+				setValues: {
+					UserRole: 'administrator'
+				},
+				where: {
+					cwid: newAdminCWIDS
+				}
+			};
+
+			let queryDataString = JSON.stringify(queryData);
+			request.post('/api/users').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
 		});
 	}
 
