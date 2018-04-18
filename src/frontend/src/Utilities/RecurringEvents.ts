@@ -1,6 +1,7 @@
 import { Moment } from 'moment';
 
 export interface RecurringEventInfo {
+	id: string;
 	type: 'daily' | 'weekly' | 'monthly';
 	monthlyDay: string | undefined;
 	weeklyDays: string | undefined;
