@@ -14,7 +14,12 @@ $app->put('/rooms', function (Request $request, Response $response, array $args)
 		$queryDataArray = [$queryDataArray];
 
 	foreach ($queryDataArray as $queryData) {
-		$queryData = getInsertQueryData($request);
+		if (!isset($queryData['insertValues']) || 
+		!isset($queryData['insertValues']['RoomName']) ||
+		!isset($queryData['insertValues']['LocationName'])) {
+			return $response->withStatus(400);
+		}
+
 		$queryString = DBUtil::buildInsertQuery('rooms', $queryData['insertValues']);
 		$results[$queryData['insertValues']] = DBUtil::runCommand($queryString);
 	}
