@@ -69,7 +69,7 @@ export class Administration extends React.Component<Props, State> {
 					Manage Locations
 				</button>
 				<div className={this.state.showManageLocations ? '' : 'd-none'}>
-					<ManageLocations />
+					<ManageLocations handleShowAlert={this.props.handleShowAlert}/>
 				</div>
 				<button onClick={() => this.setState({ showManageGroups: !this.state.showManageGroups })} className="btn btn-primary btn-block mb-2" >
 					Manage Groups

@@ -7,7 +7,9 @@ interface Location {
 	name: string;
 }
 
-interface Props { }
+interface Props {
+	handleShowAlert: Function;
+}
 
 interface State {
 	locations: Location[];
@@ -107,8 +109,7 @@ export class ManageLocations extends React.Component<Props, State> {
 				this.setState({ locations: parsedLocations, selectedLocation: parsedLocations[0].name, selectedLocationIndex: 0 });
 			} else
 				alert('Error getting location data! Handle this properly!');
-			// TODO: Add the prop and the following
-			// this.props.handleShowAlert('error', 'Error getting class data.');
+			this.props.handleShowAlert('error', 'Error getting class data.');
 		});
 	}
 
@@ -158,13 +159,13 @@ export class ManageLocations extends React.Component<Props, State> {
 			];
 
 			Promise.all(persistToDBPromises).then(() => {
-				// this.props.handleShowAlert('success', 'Successfully submitted data!');
+				this.props.handleShowAlert('success', 'Successfully submitted data!');
 				this.resetDBNames();
 			}).catch(() => {
-				// this.props.handleShowAlert('error', 'Error submitting data.');
+				this.props.handleShowAlert('error', 'Error submitting data.');
 			});
 		}).catch(() => {
-			// this.props.handleShowAlert('error', 'Error submitting data.');
+			this.props.handleShowAlert('error', 'Error submitting data.');
 		});
 	}
 
@@ -194,7 +195,7 @@ export class ManageLocations extends React.Component<Props, State> {
 		return locations.filter(stateLocation => {
 			let isIdentical = false;
 			filterLocations.forEach(dbLocation => {
-				if (dbLocation.name === stateLocation.name)
+				if (dbLocation.dbName === stateLocation.dbName && dbLocation.name === stateLocation.name)
 					isIdentical = true;
 			});
 
@@ -241,7 +242,7 @@ export class ManageLocations extends React.Component<Props, State> {
 			});
 
 			let queryDataString = JSON.stringify(queryData);
-
+			console.log(queryDataString);
 			request.put('/api/locations').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (res && res.body)
 					resolve();
