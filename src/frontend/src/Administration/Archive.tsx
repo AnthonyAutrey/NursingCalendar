@@ -152,7 +152,7 @@ export class Archive extends React.Component<Props, State> {
 			insertValues: {
 				CWID: this.props.cwid,
 				Message: 'Events Archived',
-				Details: 'Archival Period: ' + this.state.archiveStartDate + ' - ' + this.state.archiveEndDate
+				Details: 'Archival Period: from ' + this.state.archiveStartDate + ' to ' + this.state.archiveEndDate + '.'
 			}
 		};
 
