@@ -3,8 +3,10 @@ const uuid = require('uuid/v4');
 const request = require('superagent');
 
 interface Resource {
+	dbName: string;
 	name: string;
-	isEnumerable: boolean;
+	dbIsEnumerable: number;
+	isEnumerable: number;
 }
 
 interface Props {
@@ -13,6 +15,8 @@ interface Props {
 
 interface State {
 	resources: Resource[];
+	selectedResource: string;
+	selectedResourceIndex: number;
 }
 
 // TODO: Finish adding functionality to this class
@@ -20,7 +24,9 @@ export class ManageResources extends React.Component<Props, State> {
 	constructor(props: Props, state: State) {
 		super(props, state);
 		this.state = {
-			resources: []
+			resources: [],
+			selectedResource: '',
+			selectedResourceIndex: 0
 		};
 	}
 
@@ -31,7 +37,7 @@ export class ManageResources extends React.Component<Props, State> {
 	render() {
 
 		let resourceOptions = this.state.resources.map(resource => {
-			return (<option key={uuid()}>{resource.name}</option>);
+			return (<option key={uuid()} value={resource.name}>{resource.name}</option>);
 		});
 
 		return (
@@ -40,8 +46,8 @@ export class ManageResources extends React.Component<Props, State> {
 				<div className="w-100 px-5">
 					<div className="card-body">
 						<div className="row">
-							<h4 className="card-title">{'Manage Resources'}</h4>
-							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.needsWork}>
+							<h4 className="card-title">Manage Resources</h4>
+							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddResource}>
 								Add Resource &nbsp;&nbsp;
 									<span className="plusIcon oi oi-size-sm oi-plus" />
 							</button>
@@ -52,8 +58,8 @@ export class ManageResources extends React.Component<Props, State> {
 							<div className="col-lg-8">
 								<select
 									className="form-control"
-									value={'dummy val'}
-									onChange={this.needsWork}
+									value={this.state.selectedResource}
+									onChange={this.handleSelectedResourceChange}
 								>
 									{resourceOptions}
 								</select>
@@ -66,8 +72,8 @@ export class ManageResources extends React.Component<Props, State> {
 								<input
 									className="form-control form-control"
 									type="text"
-									value={'Resource Name goes Here'}
-									onChange={this.needsWork}
+									value={this.state.selectedResource}
+									onChange={(e) => this.handleChangeResourceName(e, this.state.selectedResourceIndex)}
 								/>
 							</div>
 						</div>
@@ -85,7 +91,7 @@ export class ManageResources extends React.Component<Props, State> {
 						</div>
 						<div className="form-group row">
 							<div className="col-lg-12">
-								<button type="button" className="btn btn-danger" onClick={this.needsWork}>
+								<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteResource(this.state.selectedResourceIndex)}>
 									<span className=" oi oi-trash" />
 									<span>&nbsp;&nbsp;</span>
 									Delete Resource
@@ -94,7 +100,7 @@ export class ManageResources extends React.Component<Props, State> {
 						</div>
 						<hr />
 						<div className="row">
-							<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={this.needsWork}>
+							<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
 								Submit Changes
 							</button>
 						</div>
@@ -109,26 +115,298 @@ export class ManageResources extends React.Component<Props, State> {
 	}
 
 	needsWork = () => { return true; };
-	
+
 	getResourcesFromDB = () => {
+
 		request.get('/api/resources').end((error: {}, res: any) => {
-			if (res && res.body)
-				this.parseResources(res.body);
-			// else
-			// this.props.handleShowAlert('error', 'Error getting class data.');
+			if (res && res.body) {
+				let parsedResources = this.parseResources(res.body);
+				this.setState({ resources: parsedResources, selectedResource: parsedResources[0].name, selectedResourceIndex: 0 });
+			} else {
+				alert('Error getting resource data! Handle this properly!');
+				this.props.handleShowAlert('error', 'Error getting class data.');
+			}
 		});
 	}
-	parseResources = (dbResources: any[]) => {
+
+	parseResources = (dbResources: any[]): Resource[] => {
 		let resources: Resource[] = [];
 		dbResources.forEach(dbResource => {
 			let resource: Resource = {
+				dbName: dbResource.ResourceName,
 				name: dbResource.ResourceName,
+				dbIsEnumerable: dbResource.IsEnumerable,
 				isEnumerable: dbResource.IsEnumerable
 			};
 			resources.push(resource);
 		});
 
-		this.setState({ resources: resources });
+		return resources;
+	}
+
+	handlePersistChanges = () => {
+		if (!this.doValidityChecks())
+			return;
+
+		let getResourcesFromDB: Promise<Resource[]> = new Promise((resolve, reject) => {
+			request.get('/api/resources').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve(this.parseResources(res.body));
+				else
+					reject();
+			});
+		});
+
+		getResourcesFromDB.then((dbResources) => {
+			let resourceNamesToDelete = this.getResourceNamesNotInState(dbResources);
+			let resourcesToCreateInDB = this.getResourcesNotInDB(dbResources);
+			let resourcesNotCreatedInDB = this.filterIdenticalResources(this.state.resources, resourcesToCreateInDB);
+			let resourcesToUpdateInDB = this.filterIdenticalResources(resourcesNotCreatedInDB, dbResources);
+
+			console.log('To Delete: ');
+			console.log(resourceNamesToDelete);
+			console.log('To Create: ');
+			console.log(resourcesToCreateInDB);
+			console.log('To Update: ');
+			console.log(resourcesToUpdateInDB);
+
+			let persistToDBPromises = [
+				this.deleteResourcesFromDB(resourceNamesToDelete),
+				this.createResourcesInDB(resourcesToCreateInDB),
+				this.updateResourcesInDB(resourcesToUpdateInDB)
+			];
+
+			Promise.all(persistToDBPromises).then(() => {
+				this.props.handleShowAlert('success', 'Successfully submitted data!');
+				this.resetDBNames();
+			}).catch(() => {
+				this.props.handleShowAlert('error', 'Error submitting data.');
+			});
+		}).catch(() => {
+			this.props.handleShowAlert('error', 'Error submitting data.');
+		});
+	}
+
+	getResourceNamesNotInState = (resources: Resource[]): string[] => {
+		let resourcesNotInState = resources.filter(resource => {
+			return !this.state.resources.map(stateResource => {
+				return stateResource.dbName;
+			}).includes(resource.dbName);
+		});
+
+		return resourcesNotInState.map(resource => {
+			return resource.name;
+		});
+	}
+
+	getResourcesNotInDB = (dbResources: Resource[]): Resource[] => {
+		let resourcesNotInDB = this.state.resources.filter(stateResource => {
+			return !dbResources.map(dbResource => {
+				return dbResource.dbName;
+			}).includes(stateResource.dbName);
+		});
+
+		return resourcesNotInDB;
+	}
+
+	filterIdenticalResources = (resources: Resource[], filterResources: Resource[]): Resource[] => {
+		return resources.filter(stateResource => {
+			let isIdentical = false;
+			filterResources.forEach(dbResource => {
+				if (dbResource.dbName === stateResource.dbName && dbResource.name === stateResource.name)
+					isIdentical = true;
+			});
+
+			return !isIdentical;
+		});
+	}
+
+	deleteResourcesFromDB = (resourceNames: string[]) => {
+		return new Promise((resolve, reject) => {
+			if (resourceNames.length <= 0) {
+				resolve();
+				return;
+			}
+
+			let queryData = {
+				where: {
+					ResourceName: resourceNames
+				}
+			};
+			let queryDataString = JSON.stringify(queryData);
+
+			request.delete('/api/resources').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
+	}
+
+	createResourcesInDB = (resources: Resource[]) => {
+		return new Promise((resolve, reject) => {
+			if (resources.length <= 0) {
+				resolve();
+				return;
+			}
+
+			let queryData: {}[] = resources.map(resource => {
+				return {
+					insertValues: {
+						ResourceName: resource.name,
+						IsEnumerable: resource.isEnumerable
+					}
+				};
+			});
+
+			let queryDataString = JSON.stringify(queryData);
+			request.put('/api/resources').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
+	}
+
+	updateResourcesInDB = (resources: Resource[]) => {
+		return new Promise((resolve, reject) => {
+			if (resources.length <= 0) {
+				resolve();
+				return;
+			}
+
+			let queryData: {}[] = resources.map(resource => {
+				return {
+					setValues: {
+						ResourceName: resource.name,
+						IsEnumerable: resource.isEnumerable
+					},
+					where: {
+						ResourceName: resource.dbName
+					}
+				};
+			});
+
+			let queryDataString = JSON.stringify(queryData);
+
+			request.post('/api/resources').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
+	}
+
+	resetDBNames = () => {
+		let resetResources: Resource[] = this.state.resources.map(resource => {
+			return {
+				dbName: resource.name,
+				name: resource.name,
+				dbIsEnumerable: resource.isEnumerable,
+				isEnumerable: resource.isEnumerable
+			};
+		});
+
+		this.setState({ resources: resetResources });
+	}
+
+	handleSelectedResourceChange = (event: any) => {
+		event.preventDefault();
+
+		if (!this.doValidityChecks())
+			return;
+
+		let resourceName = event.target.value;
+		let resourceIndex = this.getSelectedResourceIndex(resourceName);
+		this.setState({ selectedResource: resourceName, selectedResourceIndex: resourceIndex });
+	}
+
+	handleChangeResourceName = (event: any, index: number) => {
+		if (event.target.value.length <= 60) {
+			let resources = this.state.resources.slice(0);
+			resources[index].name = event.target.value;
+			this.setState({ resources: resources, selectedResource: event.target.value });
+		}
+	}
+
+	getSelectedResource = () => {
+		return this.state.resources.slice(0)[this.state.selectedResourceIndex];
+	}
+
+	getSelectedResourceIndex = (resourceName: String): number => {
+		let index = -1;
+		this.state.resources.forEach((resource, resIndex) => {
+			if (resourceName === resource.name)
+				index = resIndex;
+		});
+
+		return index;
+	}
+
+	handleAddResource = () => {
+		if (!this.doValidityChecks())
+			return;
+
+		let newResourceCount = 0;
+		this.state.resources.forEach(resource => {
+			if (resource.name.substr(0, 12) === 'New Resource')
+				newResourceCount++;
+		});
+
+		let newResource: Resource = {
+			dbName: ('New Resource ' + ((newResourceCount === 0) ? '' : newResourceCount)).trim(),
+			name: ('New Resource ' + ((newResourceCount === 0) ? '' : newResourceCount)).trim(),
+			dbIsEnumerable: 1,
+			isEnumerable: 1
+
+		};
+
+		let resources = this.state.resources.slice(0);
+		resources.push(newResource);
+
+		this.setState({ resources: resources, selectedResource: newResource.name, selectedResourceIndex: resources.length - 1 });
+	}
+
+	handleDeleteResource = (index: number) => {
+		if (!confirm('Are you sure you want to delete this resource?'))
+			return;
+
+		let resources = this.state.resources.slice(0);
+		resources.splice(index, 1);
+
+		this.setState({ resources: resources, selectedResource: this.state.resources[0].name, selectedResourceIndex: 0 });
+	}
+
+	doValidityChecks(): boolean {
+		if (this.resourceNameIsTaken()) {
+			alert('The resource name you\'ve chosen is already being used. Please enter a valid resource name before continuing.');
+			return false;
+		}
+		if (this.resourceNameIsEmpty()) {
+			alert('The current resource name is empty. Please enter a valid resource name before continuing.');
+			return false;
+		}
+
+		return true;
+	}
+
+	resourceNameIsTaken = (): boolean => {
+		let selectedResource: Resource = this.getSelectedResource();
+		let resourceNameIsTaken: boolean = false;
+		this.state.resources.forEach((resource, index) => {
+			if (resource.name === selectedResource.name && Number(index) !== Number(this.state.selectedResourceIndex))
+				resourceNameIsTaken = true;
+		});
+
+		return resourceNameIsTaken;
+	}
+
+	resourceNameIsEmpty = (): boolean => {
+		let selectedResource: Resource = this.getSelectedResource();
+		return selectedResource.name === '';
 	}
 }
 
