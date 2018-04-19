@@ -133,19 +133,22 @@ function getEventGroupsToInsert(Request $request) : array {
 	return sanitize($groups);
 }
 
-function insertEventGroups($groups, $eventID, $location, $room) : array {
+function insertEventGroups($groups, $eventID, $location, $room) : String {
 	$groupsToInsert = $groups;
 	$insertResults = [];
+	$groupRelationQueryString = "";
 	foreach ($groupsToInsert as $groupToInsert) {
 		$groupInsertValues = array();
 		$groupInsertValues['EventID'] = $eventID;
 		$groupInsertValues['LocationName'] = $location;
 		$groupInsertValues['RoomName'] = $room;
 		$groupInsertValues['GroupName'] = $groupToInsert;
-		$groupRelationQueryString = DBUtil::buildInsertQuery('EventGroupRelation', $groupInsertValues);
-		$insertResults[$groupToInsert] = DBUtil::runCommand($groupRelationQueryString);
+		$groupRelationQueryString .= DBUtil::buildInsertQuery('EventGroupRelation', $groupInsertValues).';';
 	}
 	
+	if ($groupRelationQueryString !== "")
+		$insertResults[$groupToInsert] = DBUtil::runCommand($groupRelationQueryString);
+
 	return $insertResults;
 }
 

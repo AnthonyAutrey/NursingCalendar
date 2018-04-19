@@ -114,7 +114,7 @@ export class CreateEventModal extends React.Component<Props, State> {
 			);
 
 		return (
-			<div onKeyPress={this.handleKeyPress} style={backdropStyle}>
+			<div style={backdropStyle}>
 				<div className="modal-dialog" role="document">
 					<div className="modal-content">
 						<div className="modal-header">
@@ -221,11 +221,6 @@ export class CreateEventModal extends React.Component<Props, State> {
 			newGroups.push(unselectedGroups[0]);
 			this.setState({ groups: newGroups });
 		}
-	}
-
-	handleKeyPress = (event: any) => {
-		if (event.key === 'Enter')
-			this.save();
 	}
 
 	close = () => {

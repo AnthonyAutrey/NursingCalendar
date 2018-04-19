@@ -148,12 +148,12 @@ CREATE TABLE UserGroupRelation
 	FOREIGN KEY (GroupName) REFERENCES Groups(GroupName) ON UPDATE CASCADE
 );
 
-CREATE TABLE RecurrringEventRelation
+CREATE TABLE RecurringEventRelation
 (
 	RecurringID CHAR(36) NOT NULL, -- uuid
 	EventID INT NOT NULL,
-	LocationName varchar(60) NOT NULL,
-	RoomName varchar(60) NOT NULL,
+	LocationName VARCHAR(60) NOT NULL,
+	RoomName VARCHAR(60) NOT NULL,
 	RecurringType ENUM('daily', 'weekly', 'monthly') NOT NULL,
 	MonthlyWeekday CHAR(2),
 		-- 1 for first, 2 for second, 3 for third, 4 for fourth, 5 for last,
@@ -162,7 +162,7 @@ CREATE TABLE RecurrringEventRelation
 		-- if doesn't recur monthly, then NULL
 	WeeklyDays VARCHAR(7), -- use single character identifiers: (mtwrfsu), if doesn't recur weekly, then NULL
 	PRIMARY KEY (RecurringID, EventID, LocationName, RoomName),
-	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName)
+	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE GroupCRNs
