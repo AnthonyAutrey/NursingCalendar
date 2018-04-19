@@ -7,12 +7,15 @@ interface Resource {
 	isEnumerable: boolean;
 }
 
-interface Props { }
+interface Props {
+	handleShowAlert: Function;
+}
 
 interface State {
 	resources: Resource[];
 }
 
+// TODO: Finish adding functionality to this class
 export class ManageResources extends React.Component<Props, State> {
 	constructor(props: Props, state: State) {
 		super(props, state);
@@ -24,45 +27,6 @@ export class ManageResources extends React.Component<Props, State> {
 	componentWillMount() {
 		this.getResourcesFromDB();
 	}
-
-	// render() {
-	// 	let resourceOptions = this.state.resources.map(resource => {
-	// 		return (<option key={uuid()}>{resource.name}</option>);
-	// 	});
-	// 	return (
-	// 		<div>
-	// 			<div className="w-100 px-5">
-	// 				<div className="card-body">
-	// 					<h4 className="card-title">{'Manage Resources'}</h4>
-	// 					<hr />
-	// 					<div className="form-group d-flex">
-	// 						<div className="w-100 mr-2">
-	// 							<select
-	// 								className="form-control"
-	// 							>
-	// 								{resourceOptions}
-	// 							</select>
-	// 						</div>
-	// 						<div className="ml-auto" style={{ width: '120px !important' }}>
-	// 							<button className="btn btn-primary col-form-label text-mid btn-block">
-	// 								Edit Resource
-	// 							</button>
-	// 						</div>
-	// 					</div>
-	// 					<div className="form-group d-flex">
-	// 						<div className="w-100 mr-2" />
-	// 						<div className="ml-auto" style={{ width: '120px !important' }}>
-	// 							<button className="btn btn-primary col-form-label text-mid ml-auto">
-	// 								Add Resource &nbsp;&nbsp;
-	// 							<span className="plusIcon oi oi-size-sm oi-plus" />
-	// 							</button>
-	// 						</div>
-	// 					</div>
-	// 				</div>
-	// 			</div>
-	// 		</div>
-	// 	);
-	// }
 
 	render() {
 
@@ -145,6 +109,7 @@ export class ManageResources extends React.Component<Props, State> {
 	}
 
 	needsWork = () => { return true; };
+	
 	getResourcesFromDB = () => {
 		request.get('/api/resources').end((error: {}, res: any) => {
 			if (res && res.body)

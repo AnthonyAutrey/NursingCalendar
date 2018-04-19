@@ -1,70 +1,51 @@
 import * as React from 'react';
-import { Room } from '../Scheduler/Scheduler';
+// import { Room } from '../Scheduler/Scheduler';
 const uuid = require('uuid/v4');
 const request = require('superagent');
 
+// TODO: Discuss the implementation of this interface with Tony.
+// Do we want to add extra fields to the Room interface from Scheduler or keep this new one?
+interface TempRoom {
+	locationName: string;
+	dbLocationName: string;
+	roomName: string;
+	dbRoomName: string;
+	capacity: number;
+	dbCapacity: number;
+	resources: { name: string, count: number }[];
+	dbResources: { name: string, count: number }[];
+}
+
 interface Props {
-
+	handleShowAlert: Function;
 }
+
 interface State {
-	rooms: Room[];
+	rooms: TempRoom[];
+	selectedRoomIndex: number;
+	initialized: boolean;
 }
-
+// TODO: Finish adding functionality to this class
 export class ManageRooms extends React.Component<Props, State> {
 	constructor(props: Props, state: State) {
 		super(props, state);
 		this.state = {
-			rooms: []
+			rooms: [],
+			selectedRoomIndex: 0,
+			initialized: false
 		};
 	}
 
 	componentWillMount() {
-		this.getAllRoomsFromDB();
+		this.getRoomsFromDB();
 	}
 
-	// render() {
-	// 	let roomOptions = this.state.rooms.map(room => {
-	// 		return (<option key={uuid()}>{room.locationName + ' - ' + room.roomName}</option>);
-	// 	});
-	// 	return (
-	// 		<div>
-	// 			<div className="w-100 px-5">
-	// 				<div className="card-body">
-	// 					<h4 className="card-title">{'Manage Rooms'}</h4>
-	// 					<hr />
-	// 					<div className="form-group d-flex">
-	// 						<div className="w-100 mr-2">
-	// 							<select
-	// 								className="form-control"
-	// 							>
-	// 								{roomOptions}
-	// 							</select>
-	// 						</div>
-	// 						<div className="ml-auto" style={{ width: '120px !important' }}>
-	// 							<button className="btn btn-primary col-form-label text-mid btn-block">
-	// 								Edit Room
-	// 							</button>
-	// 						</div>
-	// 					</div>
-	// 					<div className="form-group d-flex">
-	// 						<div className="w-100 mr-2" />
-	// 						<div className="ml-auto" style={{ width: '120px !important' }}>
-	// 							<button className="btn btn-primary col-form-label text-mid ml-auto">
-	// 								Add Room &nbsp;&nbsp;
-	// 							<span className="plusIcon oi oi-size-sm oi-plus" />
-	// 							</button>
-	// 						</div>
-	// 					</div>
-	// 				</div>
-	// 			</div>
-	// 		</div>
-	// 	);
-	// }
-
 	render() {
+		if (!this.state.initialized)
+			return null;
 
 		let roomOptions = this.state.rooms.map(room => {
-			return (<option key={uuid()}>{room.locationName + ' - ' + room.roomName}</option>);
+			return (<option key={uuid()}>{room.roomName}</option>);
 		});
 
 		return (
@@ -73,8 +54,8 @@ export class ManageRooms extends React.Component<Props, State> {
 				<div className="w-100 px-5">
 					<div className="card-body">
 						<div className="row">
-							<h4 className="card-title">{'Manage Rooms'}</h4>
-							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.needsWork}>
+							<h4 className="card-title">Manage Rooms</h4>
+							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddRoom}>
 								Add Room &nbsp;&nbsp;
 									<span className="plusIcon oi oi-size-sm oi-plus" />
 							</button>
@@ -85,8 +66,8 @@ export class ManageRooms extends React.Component<Props, State> {
 							<div className="col-lg-8">
 								<select
 									className="form-control"
-									value={'Room Info should go here'}
-									onChange={this.needsWork}
+									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
+									onChange={this.handleSelectedRoomChange}
 								>
 									{roomOptions}
 								</select>
@@ -99,7 +80,7 @@ export class ManageRooms extends React.Component<Props, State> {
 								<input
 									className="form-control form-control"
 									type="text"
-									value={'Room Name here'}
+									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
 									onChange={this.needsWork}
 								/>
 							</div>
@@ -110,7 +91,7 @@ export class ManageRooms extends React.Component<Props, State> {
 								<input
 									className="form-control form-control"
 									type="text"
-									value={'Location here'}
+									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
 									onChange={this.needsWork}
 								/>
 							</div>
@@ -121,7 +102,7 @@ export class ManageRooms extends React.Component<Props, State> {
 								<input
 									className="form-control form-control"
 									type="text"
-									value={'Capacity here'}
+									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
 									onChange={this.needsWork}
 								/>
 							</div>
@@ -153,44 +134,119 @@ export class ManageRooms extends React.Component<Props, State> {
 
 	needsWork = () => { return true; };
 
-	getAllRoomsFromDB() {
+	getRoomsFromDB = () => {
+
 		request.get('/api/rooms').end((error: {}, res: any) => {
 			if (res && res.body) {
-				let rooms: any[] = res.body;
-				let parsedRooms = this.parseRoomsFromDB(rooms);
-				this.setState({ rooms: parsedRooms });
+				let parsedRooms = this.parseRooms(res.body);
+				this.setState({ rooms: parsedRooms, selectedRoomIndex: 0, initialized: true });
+			} else {
+				alert('Error getting room data! Handle this properly!');
+				this.props.handleShowAlert('error', 'Error getting class data.');
 			}
 		});
 	}
 
-	parseRoomsFromDB(rooms: any[]): Room[] {
-		let parsedRooms: Room[] = [];
-		let roomMap: Map<string, Room> = new Map<string, Room>();
-		rooms.forEach((room: any) => {
-			if (!roomMap.has(room.RoomName + room.LocationName)) {
-				let resources: { name: string, count: number }[] = [];
-				if (room.ResourceName && room.Count)
-					resources = [{ name: room.ResourceName, count: room.Count }];
-
-				let newRoom: Room = {
-					locationName: room.LocationName,
-					roomName: room.RoomName,
-					capacity: room.Capacity,
-					resources: resources
-				};
-				roomMap.set(room.RoomName + room.LocationName, newRoom);
-			} else {
-				let alreadySetRoom = roomMap.get(room.RoomName + room.LocationName);
-				if (alreadySetRoom)
-					alreadySetRoom.resources.push({ name: room.ResourceName, count: room.Count });
-			}
+	parseRooms = (dbRooms: any[]): TempRoom[] => {
+		let rooms: TempRoom[] = [];
+		dbRooms.forEach(dbRoom => {
+			let room: TempRoom = {
+				locationName: dbRoom.LocationName,
+				dbLocationName: dbRoom.LocationName,
+				roomName: dbRoom.RoomName,
+				dbRoomName: dbRoom.RoomName,
+				capacity: dbRoom.Capacity,
+				dbCapacity: dbRoom.Capacity,
+				resources: dbRoom.Resources,
+				dbResources: dbRoom.Resources
+			};
+			rooms.push(room);
 		});
 
-		roomMap.forEach(parsedRoom => {
-			parsedRooms.push(parsedRoom);
+		return rooms;
+	}
+
+	handleAddRoom = () => {
+		if (!this.doValidityChecks())
+			return;
+
+		let newRoomCount = 0;
+		this.state.rooms.forEach(room => {
+			if (room.roomName.substr(0, 8) === 'New Room')
+				newRoomCount++;
 		});
 
-		return parsedRooms;
+		// TODO: Handle the location selection on this new room effectively.
+		let newRoom: TempRoom = {
+			locationName: 'Choose a Location Here',
+			dbLocationName: 'Choose a Location Here',
+			roomName: ('New Location ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
+			dbRoomName: ('New Location ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
+			capacity: 0,
+			dbCapacity: 0,
+			resources: [],
+			dbResources: []
+		};
+
+		let rooms = this.state.rooms.slice(0);
+		rooms.push(newRoom);
+
+		this.setState({ rooms: rooms, selectedRoomIndex: rooms.length - 1 });
+	}
+
+	handleSelectedRoomChange = (event: any) => {
+		event.preventDefault();
+
+		if (!this.doValidityChecks())
+			return;
+
+		let roomName = event.target.value;
+		let roomIndex = this.getSelectedRoomIndex(roomName);
+		this.setState({selectedRoomIndex: roomIndex });
+	}
+
+	getSelectedRoomIndex = (roomName: String): number => {
+		let index = -1;
+		this.state.rooms.forEach((room, roomIndex) => {
+			if (roomName === room.roomName)
+				index = roomIndex;
+		});
+
+		return index;
+	}
+
+	doValidityChecks(): boolean {
+		if (this.roomNameIsTaken()) {
+			alert('The room name you\'ve chosen is already being used. Please enter a valid room name before continuing.');
+			return false;
+		}
+		if (this.roomNameIsEmpty()) {
+			alert('The current room name is empty. Please enter a valid room name before continuing.');
+			return false;
+		}
+
+		return true;
+	}
+
+	roomNameIsTaken = (): boolean => {
+		let selectedRoom: TempRoom = this.getSelectedRoom();
+		let roomNameIsTaken: boolean = false;
+		this.state.rooms.forEach((room, index) => {
+			if (room.locationName === selectedRoom.locationName && 
+				room.roomName === selectedRoom.roomName && Number(index) !== Number(this.state.selectedRoomIndex))
+				roomNameIsTaken = true;
+		});
+
+		return roomNameIsTaken;
+	}
+
+	roomNameIsEmpty = (): boolean => {
+		let selectedRoom: TempRoom = this.getSelectedRoom();
+		return selectedRoom.roomName === '';
+	}
+
+	getSelectedRoom = () => {
+		return this.state.rooms.slice(0)[this.state.selectedRoomIndex];
 	}
 }
 

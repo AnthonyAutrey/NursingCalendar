@@ -58,13 +58,13 @@ export class Administration extends React.Component<Props, State> {
 					Manage Rooms
 				</button>
 				<div className={this.state.showManageRooms ? '' : 'd-none'}>
-					<ManageRooms />
+					<ManageRooms handleShowAlert={this.props.handleShowAlert}/>
 				</div>
 				<button onClick={() => this.setState({ showManageResources: !this.state.showManageResources })} className="btn btn-primary btn-block mb-2" >
 					Manage Resources
 				</button>
 				<div className={this.state.showManageResources ? '' : 'd-none'}>
-					<ManageResources />
+					<ManageResources handleShowAlert={this.props.handleShowAlert}/>
 				</div>
 				<button onClick={() => this.setState({ showManageLocations: !this.state.showManageLocations })} className="btn btn-primary btn-block mb-2" >
 					Manage Locations

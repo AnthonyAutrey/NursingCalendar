@@ -43,7 +43,7 @@ export class ManageLocations extends React.Component<Props, State> {
 				<div className="w-100 px-5">
 					<div className="card-body">
 						<div className="row">
-							<h4 className="card-title">{'Manage Locations'}</h4>
+							<h4 className="card-title">Manage Locations</h4>
 							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
 								Add Location &nbsp;&nbsp;
 									<span className="plusIcon oi oi-size-sm oi-plus" />
@@ -107,9 +107,10 @@ export class ManageLocations extends React.Component<Props, State> {
 			if (res && res.body) {
 				let parsedLocations = this.parseLocations(res.body);
 				this.setState({ locations: parsedLocations, selectedLocation: parsedLocations[0].name, selectedLocationIndex: 0 });
-			} else
+			} else {
 				alert('Error getting location data! Handle this properly!');
-			this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting class data.');
+			}
 		});
 	}
 
@@ -242,7 +243,6 @@ export class ManageLocations extends React.Component<Props, State> {
 			});
 
 			let queryDataString = JSON.stringify(queryData);
-			console.log(queryDataString);
 			request.put('/api/locations').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (res && res.body)
 					resolve();
@@ -293,15 +293,12 @@ export class ManageLocations extends React.Component<Props, State> {
 	}
 
 	handleSelectedLocationChange = (event: any) => {
-		console.log('handleSelectedLocationChange');
-		console.log(event);
 		event.preventDefault();
 
 		if (!this.doValidityChecks())
 			return;
 
 		let locationName = event.target.value;
-		console.log(locationName);
 		let locationIndex = this.getSelectedLocationIndex(locationName);
 		this.setState({ selectedLocation: locationName, selectedLocationIndex: locationIndex });
 	}
