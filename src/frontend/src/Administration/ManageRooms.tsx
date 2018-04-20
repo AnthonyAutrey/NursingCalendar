@@ -45,7 +45,7 @@ export class ManageRooms extends React.Component<Props, State> {
 			return null;
 
 		let roomOptions = this.state.rooms.map(room => {
-			return (<option key={uuid()}>{room.roomName}</option>);
+			return (<option key={uuid()} value={room.roomName}>{room.locationName + ' - ' + room.roomName}</option>);
 		});
 
 		return (
@@ -91,7 +91,7 @@ export class ManageRooms extends React.Component<Props, State> {
 								<input
 									className="form-control form-control"
 									type="text"
-									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
+									value={this.state.rooms[this.state.selectedRoomIndex].locationName}
 									onChange={this.needsWork}
 								/>
 							</div>
@@ -102,7 +102,7 @@ export class ManageRooms extends React.Component<Props, State> {
 								<input
 									className="form-control form-control"
 									type="text"
-									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
+									value={this.state.rooms[this.state.selectedRoomIndex].capacity}
 									onChange={this.needsWork}
 								/>
 							</div>
@@ -178,10 +178,10 @@ export class ManageRooms extends React.Component<Props, State> {
 
 		// TODO: Handle the location selection on this new room effectively.
 		let newRoom: TempRoom = {
-			locationName: 'Choose a Location Here',
-			dbLocationName: 'Choose a Location Here',
-			roomName: ('New Location ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
-			dbRoomName: ('New Location ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
+			locationName: '',
+			dbLocationName: '',
+			roomName: ('New Room ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
+			dbRoomName: ('New Room ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
 			capacity: 0,
 			dbCapacity: 0,
 			resources: [],
@@ -196,6 +196,7 @@ export class ManageRooms extends React.Component<Props, State> {
 
 	handleSelectedRoomChange = (event: any) => {
 		event.preventDefault();
+		console.log(event.target.value);
 
 		if (!this.doValidityChecks())
 			return;
