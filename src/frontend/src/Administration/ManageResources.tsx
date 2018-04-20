@@ -42,86 +42,115 @@ export class ManageResources extends React.Component<Props, State> {
 			return (<option key={uuid()} value={resource.name}>{resource.name}</option>);
 		});
 
-		return (
-			<div>
-				<hr />
-				<div className="w-100 px-5">
-					<div className="card-body">
-						<div className="row">
-							<h4 className="card-title">Manage Resources</h4>
-							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddResource}>
-								Add Resource &nbsp;&nbsp;
+		if (this.state.resources.length === 0)
+			return (
+				<div>
+					<hr />
+					<div className="w-100 px-5">
+						<div className="card-body">
+							<div className="row">
+								<h4 className="card-title">Manage Resources</h4>
+								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddResource}>
+									Add Resource &nbsp;&nbsp;
 									<span className="plusIcon oi oi-size-sm oi-plus" />
-							</button>
-						</div>
-						<hr />
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Resource:</label>
-							<div className="col-lg-8">
-								<select
-									className="form-control"
-									value={this.state.selectedResource}
-									onChange={this.handleSelectedResourceChange}
-								>
-									{resourceOptions}
-								</select>
+								</button>
 							</div>
-						</div>
-						<hr />
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Name:</label>
-							<div className="col-lg-8">
-								<input
-									className="form-control form-control"
-									type="text"
-									value={this.state.selectedResource}
-									onChange={(e) => this.handleChangeResourceName(e, this.state.selectedResourceIndex)}
-								/>
-							</div>
-						</div>
-						{/*TODO Add a tooltip and fix that shizzle*/}
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">
-								This resource should be counted for each room: &nbsp;
-							</label>
-							<input
-								type="checkbox"
-								onChange={() => { this.handleChangeResourceIsEnumerable(this.state.selectedResourceIndex); }}
-								checked={this.state.selectedResourceIsEnumerable}
-							/>
-						</div>
-						<div className="form-group row">
-							<div className="col-lg-12">
-								<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteResource(this.state.selectedResourceIndex)}>
-									<span className=" oi oi-trash" />
-									<span>&nbsp;&nbsp;</span>
-									Delete Resource
-						</button>
-							</div>
-						</div>
-						<hr />
-						<div className="row">
-							<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
-								Submit Changes
-							</button>
-						</div>
-						<div className="form-group d-flex">
-							<div className="ml-auto" style={{ width: '120px !important' }} />
+							<hr />
 						</div>
 					</div>
+					<hr />
+					<div className="row">
+						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+							Submit Changes
+							</button>
+					</div>
+					<div className="form-group d-flex">
+						<div className="ml-auto" style={{ width: '120px !important' }} />
+					</div>
+					<hr />
 				</div>
-				<hr />
-			</div>
-		);
+			);
+		else
+			return (
+				<div>
+					<hr />
+					<div className="w-100 px-5">
+						<div className="card-body">
+							<div className="row">
+								<h4 className="card-title">Manage Resources</h4>
+								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddResource}>
+									Add Resource &nbsp;&nbsp;
+									<span className="plusIcon oi oi-size-sm oi-plus" />
+								</button>
+							</div>
+							<hr />
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Resource:</label>
+								<div className="col-lg-8">
+									<select
+										className="form-control"
+										value={this.state.selectedResource}
+										onChange={this.handleSelectedResourceChange}
+									>
+										{resourceOptions}
+									</select>
+								</div>
+							</div>
+							<hr />
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Name:</label>
+								<div className="col-lg-8">
+									<input
+										className="form-control form-control"
+										type="text"
+										value={this.state.selectedResource}
+										onChange={(e) => this.handleChangeResourceName(e, this.state.selectedResourceIndex)}
+									/>
+								</div>
+							</div>
+							{/*TODO Add a tooltip and fix that shizzle*/}
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">
+									This resource should be counted for each room: &nbsp;
+							</label>
+								<input
+									type="checkbox"
+									onChange={() => { this.handleChangeResourceIsEnumerable(this.state.selectedResourceIndex); }}
+									checked={this.state.selectedResourceIsEnumerable}
+								/>
+							</div>
+							<div className="form-group row">
+								<div className="col-lg-12">
+									<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteResource(this.state.selectedResourceIndex)}>
+										<span className=" oi oi-trash" />
+										<span>&nbsp;&nbsp;</span>
+										Delete Resource
+						</button>
+								</div>
+							</div>
+							<hr />
+							<div className="row">
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+									Submit Changes
+							</button>
+							</div>
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
+						</div>
+					</div>
+					<hr />
+				</div>
+			);
 	}
-
-	needsWork = () => { return true; };
 
 	getResourcesFromDB = () => {
 
 		request.get('/api/resources').end((error: {}, res: any) => {
 			if (res && res.body) {
 				let parsedResources = this.parseResources(res.body);
+				if (parsedResources.length === 0)
+					return;
 				let initialResourceIsEnumerableCheckValue = parsedResources[0].isEnumerableBoolean;
 				this.setState({
 					resources: parsedResources,
@@ -149,16 +178,6 @@ export class ManageResources extends React.Component<Props, State> {
 			resources.push(resource);
 		});
 
-		if (resources.length === 0) {
-			let newResource: Resource = {
-				dbName: 'New Resource',
-				name: 'New Resource',
-				dbIsEnumerable: 1,
-				isEnumerable: 1,
-				isEnumerableBoolean: true
-			};
-			resources.push(newResource);
-		}
 		return resources;
 	}
 
@@ -249,9 +268,6 @@ export class ManageResources extends React.Component<Props, State> {
 	}
 
 	deleteResourcesFromDB = (resourceNames: string[]) => {
-		// TODO: Is this okay???
-		if (this.state.resources.length === 0)
-			this.handleAddResource();
 
 		return new Promise((resolve, reject) => {
 			if (resourceNames.length <= 0) {
@@ -396,10 +412,11 @@ export class ManageResources extends React.Component<Props, State> {
 			return;
 
 		let newResourceCount = 0;
-		this.state.resources.forEach(resource => {
-			if (resource.name.substr(0, 12) === 'New Resource')
-				newResourceCount++;
-		});
+		if (this.state.resources.length !== 0)
+			this.state.resources.forEach(resource => {
+				if (resource.name.substr(0, 12) === 'New Resource')
+					newResourceCount++;
+			});
 
 		let newResource: Resource = {
 			dbName: ('New Resource ' + ((newResourceCount === 0) ? '' : newResourceCount)).trim(),
@@ -426,50 +443,26 @@ export class ManageResources extends React.Component<Props, State> {
 
 		let resources = this.state.resources.slice(0);
 		resources.splice(index, 1);
-
-		if (resources.length === 0) {
-			let newResource: Resource = {
-				dbName: 'New Resource ',
-				name: 'New Resource ',
-				dbIsEnumerable: 1,
-				isEnumerable: 1,
-				isEnumerableBoolean: true
-			};
-			resources.push(newResource);
-			this.setState({ resources: resources, selectedResource: resources[0].name, selectedResourceIndex: 0, selectedResourceIsEnumerable: true });
-		} else
+		if (resources.length === 0)
+			this.setState({ resources: resources, selectedResource: '', selectedResourceIndex: 0, selectedResourceIsEnumerable: false });
+		else
 			this.setState({ resources: resources, selectedResource: resources[0].name, selectedResourceIndex: 0 });
 	}
 
 	doValidityChecks(): boolean {
-		// TODO Is this okay?
-		let isValid = true;
-		let checkForEmptyResourceArray: Promise<Resource[]> = new Promise((resolve, reject) => {
-			if (this.state.resources.length === 0) {
-				let resources: Resource[] = [];
-				let newResource: Resource = {
-					dbName: 'New Resource ',
-					name: 'New Resource ',
-					dbIsEnumerable: 1,
-					isEnumerable: 1,
-					isEnumerableBoolean: true
-				};
-				resources.push(newResource);
-				this.setState({ resources: resources, selectedResource: resources[0].name, selectedResourceIndex: 0, selectedResourceIsEnumerable: true });
-			}
-		});
+		if (this.state.resources.length === 0)
+			return true;
 
-		checkForEmptyResourceArray.then(() => {
-			if (this.resourceNameIsTaken()) {
-				alert('The resource name you\'ve chosen is already being used. Please enter a valid resource name before continuing.');
-				isValid = false;
-			}
-			if (this.resourceNameIsEmpty()) {
-				alert('The current resource name is empty. Please enter a valid resource name before continuing.');
-				isValid = false;
-			}
-		});
-		return isValid;
+		if (this.resourceNameIsTaken()) {
+			alert('The resource name you\'ve chosen is already being used. Please enter a valid resource name before continuing.');
+			return false;
+		}
+		if (this.resourceNameIsEmpty()) {
+			alert('The current resource name is empty. Please enter a valid resource name before continuing.');
+			return false;
+		}
+
+		return true;
 	}
 
 	resourceNameIsTaken = (): boolean => {
