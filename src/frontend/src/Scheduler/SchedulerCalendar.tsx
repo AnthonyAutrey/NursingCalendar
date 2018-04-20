@@ -293,6 +293,11 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		let events: Map<number, Event> = this.cloneStateEvents();
 		let index = this.getNextEventIndex();
 		let placeholder = events.get(Number.MAX_SAFE_INTEGER);
+
+		let color = '#800029';
+		if (groups.length === 1)
+			color = ColorGenerator.getColor(groups[0]);
+
 		if (placeholder) {
 			events.set(index, {
 				id: index,
@@ -307,7 +312,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				groups: groups,
 				pendingOverride: false,
 				recurringInfo: recurringInfo,
-				color: ColorGenerator.getColor(groups[0])
+				color: color
 			});
 			events.delete(Number.MAX_SAFE_INTEGER);
 		}
