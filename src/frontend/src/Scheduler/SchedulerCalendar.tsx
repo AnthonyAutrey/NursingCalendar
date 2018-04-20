@@ -648,21 +648,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			}
 
 			Promise.all(promises).then(() => { resolved(); }).catch(() => { reject(); });
-
-			// let deleteAllPromises: Promise<null>[] = [];
-			// queryDataArray.forEach(queryData => {
-			// 	deleteAllPromises.push(new Promise((resolveDelete, rejectDelete) => {
-			// 		let queryDataString = JSON.stringify(queryData);
-			// 		request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
-			// 			if (res && res.body)
-			// 				resolveDelete();
-			// 			else
-			// 				rejectDelete();
-			// 		});
-			// 	}));
-			// });
-
-			// Promise.all(deleteAllPromises).then(() => resolved()).catch(() => reject());
 		});
 	}
 
@@ -792,9 +777,34 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				let events = this.parseDBEvents(res.body);
 				this.eventCache = this.parseDBEvents(res.body);
 
-				this.setState({ events: events, loading: false });
+				request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
+					if (recRes && recRes.body) {
+						let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
+						console.log('Got recurring Event Relations!!!!!');
+						console.log(res.body);
+						this.setState({ events: events, loading: false });
+					}
+				});
 			}
 		});
+
+		// TODO: finish this
+	}
+
+	applyRecurringInfoToEvents = (events: Map<number, Event>, recurringBody: any[]): Map<number, Event> => {
+
+		// recurringBody.forEach(dbRecurringInfo => {
+		// 	let recurringInfo: RecurringEventInfo = {
+		// 		id: dbRecurringInfo.RecurringID;
+		// 		type: 'daily' | 'weekly' | 'monthly';
+		// 		monthlyDay: string | undefined;
+		// 		weeklyDays: string | undefined;
+		// 		startDate: Moment;
+		// 		endDate: Moment;
+		// 	};
+		// });
+
+		return events;
 	}
 
 	cloneStateEvents = (): Map<number, Event> => {
