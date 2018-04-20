@@ -53,7 +53,7 @@ $app->post('/resources', function (Request $request, Response $response, array $
 			return $response->withStatus(400);
 		}
 	
-		$queryString = DBUtil::buildUpdateQuery('resources NATURAL JOIN roomResourceRelation', $queryData['setValues'], $queryData['where']);	
+		$queryString = DBUtil::buildUpdateQuery('resources', $queryData['setValues'], $queryData['where']);	
 		array_push($results, DBUtil::runCommand($queryString));
 	}
 
