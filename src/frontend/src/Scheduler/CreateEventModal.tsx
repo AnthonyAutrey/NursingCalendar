@@ -99,7 +99,7 @@ export class CreateEventModal extends React.Component<Props, State> {
 			</div>
 		);
 
-		if (this.props.groupOptionsFromAPI.length === this.state.groups.length)
+		if (this.props.groupOptionsFromAPI.length === this.state.groups.length || this.state.groups.length >= 7)
 			addButton = null;
 
 		let repeatMenu = null;

@@ -468,10 +468,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				}
 			});
 
-			console.log('begin getting recurring relations api call');
-			console.log(queryData);
 			request.get('/api/recurringeventrelations').set('queryData', queryData).end((error: {}, res: any) => {
-				console.log('end gettign recurring relations api call');
 				if (res && res.body)
 					resolved(this.parseRecurringRelations(res.body));
 				else
@@ -494,11 +491,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	persistRecurringEvents = (): Promise<null> => {
-		console.log('enter persist recurring');
 		return new Promise((resolved, reject) => {
 			this.getRecurringRelationsForRoomFromDB().then(recurringRelations => {
-				console.log('just finished getting recurring relations for room');
-
 				let recurringRelationsToAdd = this.getRecurringRelationsToAddToDB(recurringRelations);
 				console.log('Recurring Relations to Add');
 				console.log(recurringRelationsToAdd);
@@ -513,10 +507,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				];
 
 				Promise.all(promises).then(() => {
-					console.log('resolved thing');
 					resolved();
 				}).catch(() => {
-					console.log('rejected thing');
 					reject();
 				});
 
@@ -527,7 +519,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	getRecurringRelationsToAddToDB = (recurringRelations: { uuid: string, eventID: string }[]) => {
-		console.log('get recurring relations to add');
 
 		let recurringRelationValues: Set<string> = new Set();
 		recurringRelations.forEach(relation => {
@@ -566,17 +557,14 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	getRecurringRelationsToDeleteFromDB = (recurringRelations: { uuid: string, eventID: string }[]) => {
-		console.log('get recurring relations to delete');
+
 		let eventRelationValues: Set<string> = new Set();
 		this.getStateEventsAsArray().forEach(event => {
 			if (event.recurringInfo)
-				eventRelationValues.add(event.id + event.recurringInfo.id);
+				eventRelationValues.add(event.id.toString() + event.recurringInfo.id);
 		});
 
 		let recurringRelationsToDelete = recurringRelations.filter(dbRelation => {
-			// let matchingEvent = this.getStateEventsAsArray().find(event => {
-			// 	return Number(relation.eventID) === Number(event.id) && event.recurringInfo !== undefined && relation.uuid === event.recurringInfo.id;
-			// });
 			return !eventRelationValues.has(dbRelation.eventID + dbRelation.uuid);
 		});
 
@@ -606,8 +594,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			});
 
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 20);
-				queryData.splice(0, 20);
+				let queryDataPart = queryData.slice(0, 30);
+				queryData.splice(0, 30);
 
 				let queryDataString = JSON.stringify(queryDataPart);
 				request.put('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
@@ -627,7 +615,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				return;
 			}
 
-			let queryDataArray: {}[] = recurringRelations.map((relation: any) => {
+			let queryData: {}[] = recurringRelations.map((relation: any) => {
 				return {
 					where: {
 						RecurringID: relation.RecurringID,
@@ -638,20 +626,38 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				};
 			});
 
-			let deleteAllPromises: Promise<null>[] = [];
-			queryDataArray.forEach(queryData => {
-				deleteAllPromises.push(new Promise((resolveDelete, rejectDelete) => {
-					let queryDataString = JSON.stringify(queryData);
+			let promises = [];
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 30);
+				queryData.splice(0, 30);
+
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryDataPart);
 					request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body)
-							resolveDelete();
+							resAPI();
 						else
-							rejectDelete();
+							rejAPI();
 					});
 				}));
-			});
+			}
 
-			Promise.all(deleteAllPromises).then(() => resolved()).catch(() => reject());
+			Promise.all(promises).then(() => { resolved(); }).catch(() => { reject(); });
+
+			// let deleteAllPromises: Promise<null>[] = [];
+			// queryDataArray.forEach(queryData => {
+			// 	deleteAllPromises.push(new Promise((resolveDelete, rejectDelete) => {
+			// 		let queryDataString = JSON.stringify(queryData);
+			// 		request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+			// 			if (res && res.body)
+			// 				resolveDelete();
+			// 			else
+			// 				rejectDelete();
+			// 		});
+			// 	}));
+			// });
+
+			// Promise.all(deleteAllPromises).then(() => resolved()).catch(() => reject());
 		});
 	}
 
@@ -913,6 +919,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	// Event Persistence /////////////////////////////////////////////////////////////////////////////////////////////////
 	persistStateToDB(): void {
+		this.props.handleToolbarText('Submitting data, please wait.', 'info');
+		this.forceUpdate();
 		this.setState({ loading: true });
 		let persistPromises: Promise<any>[] = [];
 		persistPromises.push(this.deleteDBEventsNotInClient());
@@ -926,7 +934,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 					this.persistNewEventsToDB(eventsNotInDB).then(() => {
 						this.persistRecurringEvents().then(() => {
-							console.log('resolve persistRE');
 							res();
 						}).catch(() => {
 							rej();
@@ -942,17 +949,16 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				];
 
 				Promise.all(promises).then(() => {
-					console.log('resolved');
 					resolved();
 				}).catch(() => {
-					console.log('rejected');
 					reject();
 				});
 			}).catch(() => reject());
 		}));
 
 		Promise.all(persistPromises).then(() => {
-			console.log('~~~~~~~~~~~~~~Finished Persisting!!');
+			this.props.handleToolbarReset();
+			this.forceUpdate();
 			this.props.handleToolbarMessage('Changes saved successfully!', 'success');
 			this.eventCache = this.cloneStateEvents();
 			this.setState({ loading: false });
@@ -987,7 +993,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		return new Promise((resolveOuter, rejectOuter) => {
 			new Promise((resolved, reject) => {
 				let queryData = {
-					fields: 'EventID', where: {
+					fields: 'EventID',
+					where: {
 						LocationName: this.props.location,
 						RoomName: this.props.room
 					}
@@ -996,6 +1003,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 					if (res && res.body)
 						resolved(res.body.map((event: any) => { return Number(event.EventID); }));
+					else
+						reject();
 				});
 			}).then((allDBEventIDsForRoom: number[]) => {
 				let clientEventIDs: number[] = Array.from(this.state.events.keys()).map(id => { return Number(id); });
@@ -1091,14 +1100,13 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let promises = [];
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 15);
-				queryData.splice(0, 15);
+				let queryDataPart = queryData.slice(0, 20);
+				queryData.splice(0, 20);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
 					request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body) {
-							this.logEventUpdates(eventsToUpdate);
 							resAPI();
 						} else
 							rejAPI();
@@ -1106,8 +1114,27 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				}));
 			}
 
-			Promise.all(promises).then(() => { resolved(); }).catch(() => { reject(); });
+			Promise.all(promises).then(() => {
+				let eventsToLog = this.exludeDuplicateRecurringEvents(eventsToUpdate);
+				this.logEventUpdates(eventsToLog);
+
+				resolved();
+			}).catch(() => { reject(); });
 		});
+	}
+
+	exludeDuplicateRecurringEvents = (events: Event[]) => {
+		let recurringIDs = new Set();
+		let singularRecurringEvents: Event[] = [];
+		let eventsToLog = events.filter(event => {
+			if (event.recurringInfo && !recurringIDs.has(event.recurringInfo.id)) {
+				recurringIDs.add(event.recurringInfo.id);
+				singularRecurringEvents.push(event);
+			}
+			return event.recurringInfo === undefined;
+		});
+
+		return eventsToLog.concat(singularRecurringEvents);
 	}
 
 	getClientEventsNotYetInDB(alreadyInDB: number[]): Event[] {
@@ -1149,42 +1176,30 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				return;
 			}
 
-			// while (queryData.length > 0) {
-			// 	let queryDataPart = queryData.slice(0, 15);
-			// 	queryData.splice(0, 15);
-
-			// 	let queryDataString = JSON.stringify(queryDataPart);
-			// 	console.log(queryDataPart);
-			// 	console.log(queryData);
-			// 	console.log('..............');
-			// 	request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-			// 		if (res && res.body)
-			// 			resolved();
-			// 		else
-			// 			reject();
-			// 	});
-			// }
-
 			let promises = [];
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 15);
-				queryData.splice(0, 15);
+				let queryDataPart = queryData.slice(0, 20);
+				queryData.splice(0, 20);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
 					console.log(queryDataPart);
-					console.log(queryData);
 					console.log('..............');
 					request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-						if (res && res.body) {
+						if (res && res.body)
 							resAPI();
-						} else
+						else {
 							rejAPI();
+						}
 					});
 				}));
 			}
 
-			Promise.all(promises).then(() => { resolved(); }).catch(() => { reject(); });
+			Promise.all(promises).then(() => {
+				let eventsToLog = this.exludeDuplicateRecurringEvents(eventsToCreate);
+				this.logEventCreations(eventsToLog);
+				resolved();
+			}).catch(() => { reject(); });
 		});
 	}
 
@@ -1311,8 +1326,14 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			});
 		});
 
-		let queryDataString = JSON.stringify(queryData);
-		request.put('/api/logs').set('queryData', queryDataString).end();
+		while (queryData.length > 0) {
+			let queryDataPart = queryData.slice(0, 30);
+			queryData.splice(0, 30);
+
+			let queryDataString = JSON.stringify(queryDataPart);
+			request.put('/api/logs').set('queryData', queryDataString).end();
+		}
+
 	}
 }
 
