@@ -36,76 +36,104 @@ export class ManageLocations extends React.Component<Props, State> {
 		let locationOptions = this.state.locations.map(location => {
 			return (<option key={uuid()} value={location.name}>{location.name}</option>);
 		});
-
-		return (
-			<div>
-				<hr />
-				<div className="w-100 px-5">
-					<div className="card-body">
-						<div className="row">
-							<h4 className="card-title">Manage Locations</h4>
-							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
-								Add Location &nbsp;&nbsp;
-									<span className="plusIcon oi oi-size-sm oi-plus" />
-							</button>
-						</div>
-						<hr />
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Location:</label>
-							<div className="col-lg-8">
-								<select
-									className="form-control"
-									value={this.state.selectedLocation}
-									onChange={this.handleSelectedLocationChange}
-								>
-									{locationOptions}
-								</select>
+		if (this.state.locations.length === 0)
+			return (
+				<div>
+					<hr />
+					<div className="w-100 px-5">
+						<div className="card-body">
+							<div className="row">
+								<h4 className="card-title">Manage Locations</h4>
+								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
+									Add Location &nbsp;&nbsp;
+								<span className="plusIcon oi oi-size-sm oi-plus" />
+								</button>
 							</div>
-						</div>
-						<hr />
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Name:</label>
-							<div className="col-lg-8">
-								<input
-									className="form-control form-control"
-									type="text"
-									value={this.state.selectedLocation}
-									onChange={(e) => this.handleChangeLocationName(e, this.state.selectedLocationIndex)}
-								/>
-							</div>
-						</div>
-						<div className="form-group row">
-							<div className="col-lg-12">
-								<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteLocation(this.state.selectedLocationIndex)}>
-									<span className=" oi oi-trash" />
-									<span>&nbsp;&nbsp;</span>
-									Delete Location
-						</button>
-							</div>
-						</div>
-						<hr />
-						<div className="row">
-							<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
-								Submit Changes
-							</button>
-						</div>
-						<div className="form-group d-flex">
-							<div className="ml-auto" style={{ width: '120px !important' }} />
+							<hr />
 						</div>
 					</div>
+					<hr />
+					<div className="row">
+						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+							Submit Changes
+						</button>
+					</div>
+					<div className="form-group d-flex">
+						<div className="ml-auto" style={{ width: '120px !important' }} />
+					</div>
+					<hr />
 				</div>
-				<hr />
-			</div>
-		);
+			);
+		else
+			return (
+				<div>
+					<hr />
+					<div className="w-100 px-5">
+						<div className="card-body">
+							<div className="row">
+								<h4 className="card-title">Manage Locations</h4>
+								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
+									Add Location &nbsp;&nbsp;
+									<span className="plusIcon oi oi-size-sm oi-plus" />
+								</button>
+							</div>
+							<hr />
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Location:</label>
+								<div className="col-lg-8">
+									<select
+										className="form-control"
+										value={this.state.selectedLocation}
+										onChange={this.handleSelectedLocationChange}
+									>
+										{locationOptions}
+									</select>
+								</div>
+							</div>
+							<hr />
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Name:</label>
+								<div className="col-lg-8">
+									<input
+										className="form-control form-control"
+										type="text"
+										value={this.state.selectedLocation}
+										onChange={(e) => this.handleChangeLocationName(e, this.state.selectedLocationIndex)}
+									/>
+								</div>
+							</div>
+							<div className="form-group row">
+								<div className="col-lg-12">
+									<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteLocation(this.state.selectedLocationIndex)}>
+										<span className=" oi oi-trash" />
+										<span>&nbsp;&nbsp;</span>
+										Delete Location
+						</button>
+								</div>
+							</div>
+							<hr />
+							<div className="row">
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+									Submit Changes
+							</button>
+							</div>
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
+						</div>
+					</div>
+					<hr />
+				</div>
+			);
 	}
-
-	needsWork = () => { return true; };
 
 	getLocationsFromDB = () => {
 
 		request.get('/api/locations').end((error: {}, res: any) => {
 			if (res && res.body) {
 				let parsedLocations = this.parseLocations(res.body);
+				if (parsedLocations.length === 0)
+					return;
 				this.setState({ locations: parsedLocations, selectedLocation: parsedLocations[0].name, selectedLocationIndex: 0 });
 			} else {
 				alert('Error getting location data! Handle this properly!');
@@ -332,8 +360,15 @@ export class ManageLocations extends React.Component<Props, State> {
 			return;
 
 		let newLocationCount = 0;
+
+		if (this.state.locations.length !== 0)
+			this.state.locations.forEach(location => {
+				if (location.name.substr(0, 12) === 'New Location')
+					newLocationCount++;
+			});
+
 		this.state.locations.forEach(location => {
-			if (location.name.substr(0, 12) === 'New Location')
+			if (location.name.trim() === ('New Location ' + ((newLocationCount <= 0) ? '' : newLocationCount)).trim())
 				newLocationCount++;
 		});
 
@@ -345,7 +380,11 @@ export class ManageLocations extends React.Component<Props, State> {
 		let locations = this.state.locations.slice(0);
 		locations.push(newLocation);
 
-		this.setState({ locations: locations, selectedLocation: newLocation.name, selectedLocationIndex: locations.length - 1 });
+		this.setState({
+			locations: locations,
+			selectedLocation: newLocation.name,
+			selectedLocationIndex: locations.length - 1
+		});
 	}
 
 	handleDeleteLocation = (index: number) => {
@@ -354,11 +393,16 @@ export class ManageLocations extends React.Component<Props, State> {
 
 		let locations = this.state.locations.slice(0);
 		locations.splice(index, 1);
-
-		this.setState({ locations: locations, selectedLocation: this.state.locations[0].name, selectedLocationIndex: 0 });
+		if (locations.length === 0)
+			this.setState({ locations: locations, selectedLocation: '', selectedLocationIndex: 0 });
+		else
+			this.setState({ locations: locations, selectedLocation: locations[0].name, selectedLocationIndex: 0 });
 	}
 
 	doValidityChecks(): boolean {
+		if (this.state.locations.length === 0)
+			return true;
+
 		if (this.locationNameIsTaken()) {
 			alert('The location name you\'ve chosen is already being used. Please enter a valid location name before continuing.');
 			return false;
