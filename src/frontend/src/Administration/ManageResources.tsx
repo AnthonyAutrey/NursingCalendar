@@ -7,6 +7,7 @@ interface Resource {
 	name: string;
 	dbIsEnumerable: number;
 	isEnumerable: number;
+	isEnumerableBoolean: boolean;
 }
 
 interface Props {
@@ -17,6 +18,7 @@ interface State {
 	resources: Resource[];
 	selectedResource: string;
 	selectedResourceIndex: number;
+	selectedResourceIsEnumerable: boolean;
 }
 
 // TODO: Finish adding functionality to this class
@@ -26,7 +28,8 @@ export class ManageResources extends React.Component<Props, State> {
 		this.state = {
 			resources: [],
 			selectedResource: '',
-			selectedResourceIndex: 0
+			selectedResourceIndex: 0,
+			selectedResourceIsEnumerable: false
 		};
 	}
 
@@ -35,7 +38,6 @@ export class ManageResources extends React.Component<Props, State> {
 	}
 
 	render() {
-
 		let resourceOptions = this.state.resources.map(resource => {
 			return (<option key={uuid()} value={resource.name}>{resource.name}</option>);
 		});
@@ -80,13 +82,12 @@ export class ManageResources extends React.Component<Props, State> {
 						{/*TODO Add a tooltip and fix that shizzle*/}
 						<div className="form-group row">
 							<label className="col-lg-4 col-form-label text-left">
-								This resource should be counted for each room: &nbsp;&nbsp;
+								This resource should be counted for each room: &nbsp;
 							</label>
 							<input
-								className="form-control form-control"
 								type="checkbox"
-								value={'should be true or false, or yes or no'}
-								onChange={this.needsWork}
+								onChange={() => { this.handleChangeResourceIsEnumerable(this.state.selectedResourceIndex); }}
+								checked={this.state.selectedResourceIsEnumerable}
 							/>
 						</div>
 						<div className="form-group row">
@@ -121,7 +122,12 @@ export class ManageResources extends React.Component<Props, State> {
 		request.get('/api/resources').end((error: {}, res: any) => {
 			if (res && res.body) {
 				let parsedResources = this.parseResources(res.body);
-				this.setState({ resources: parsedResources, selectedResource: parsedResources[0].name, selectedResourceIndex: 0 });
+				let initialResourceIsEnumerableCheckValue = parsedResources[0].isEnumerableBoolean;
+				this.setState({ 
+					resources: parsedResources, 
+					selectedResource: parsedResources[0].name, 
+					selectedResourceIndex: 0, 
+					selectedResourceIsEnumerable: initialResourceIsEnumerableCheckValue});
 			} else {
 				alert('Error getting resource data! Handle this properly!');
 				this.props.handleShowAlert('error', 'Error getting class data.');
@@ -136,7 +142,8 @@ export class ManageResources extends React.Component<Props, State> {
 				dbName: dbResource.ResourceName,
 				name: dbResource.ResourceName,
 				dbIsEnumerable: dbResource.IsEnumerable,
-				isEnumerable: dbResource.IsEnumerable
+				isEnumerable: dbResource.IsEnumerable,
+				isEnumerableBoolean: (dbResource.IsEnumerable > 0)
 			};
 			resources.push(resource);
 		});
@@ -161,7 +168,7 @@ export class ManageResources extends React.Component<Props, State> {
 			let resourceNamesToDelete = this.getResourceNamesNotInState(dbResources);
 			let resourcesToCreateInDB = this.getResourcesNotInDB(dbResources);
 			let resourcesNotCreatedInDB = this.filterIdenticalResources(this.state.resources, resourcesToCreateInDB);
-			let resourcesToUpdateInDB = this.filterIdenticalResources(resourcesNotCreatedInDB, dbResources);
+			let resourcesToUpdateInDB = this.determineResourcesToUpdate();
 
 			console.log('To Delete: ');
 			console.log(resourceNamesToDelete);
@@ -219,6 +226,15 @@ export class ManageResources extends React.Component<Props, State> {
 
 			return !isIdentical;
 		});
+	}
+
+	determineResourcesToUpdate = (): Resource[] => {
+		let resourcesToUpdate: Resource[] = [];
+		this.state.resources.forEach(resource => {
+			if ((resource.dbName !== resource.name) || (resource.dbIsEnumerable !== resource.isEnumerable))
+				resourcesToUpdate.push(resource);
+		});
+		return resourcesToUpdate;
 	}
 
 	deleteResourcesFromDB = (resourceNames: string[]) => {
@@ -306,7 +322,8 @@ export class ManageResources extends React.Component<Props, State> {
 				dbName: resource.name,
 				name: resource.name,
 				dbIsEnumerable: resource.isEnumerable,
-				isEnumerable: resource.isEnumerable
+				isEnumerable: resource.isEnumerable,
+				isEnumerableBoolean: (resource.isEnumerable > 0)
 			};
 		});
 
@@ -321,7 +338,8 @@ export class ManageResources extends React.Component<Props, State> {
 
 		let resourceName = event.target.value;
 		let resourceIndex = this.getSelectedResourceIndex(resourceName);
-		this.setState({ selectedResource: resourceName, selectedResourceIndex: resourceIndex });
+		let resourceIsEnumerable = this.state.resources[resourceIndex].isEnumerableBoolean;
+		this.setState({ selectedResource: resourceName, selectedResourceIndex: resourceIndex, selectedResourceIsEnumerable: resourceIsEnumerable});
 	}
 
 	handleChangeResourceName = (event: any, index: number) => {
@@ -330,6 +348,19 @@ export class ManageResources extends React.Component<Props, State> {
 			resources[index].name = event.target.value;
 			this.setState({ resources: resources, selectedResource: event.target.value });
 		}
+	}
+
+	handleChangeResourceIsEnumerable = (index: number) => {
+		let resources = this.state.resources.slice(0);
+		if (resources[index].isEnumerableBoolean) {
+			resources[index].isEnumerable = 0;
+			resources[index].isEnumerableBoolean = false;
+		} else {
+			resources[index].isEnumerable = 1;
+			resources[index].isEnumerableBoolean = true;
+		}
+		console.log(resources[index]);
+		this.setState({ resources: resources, selectedResourceIsEnumerable: !this.state.selectedResourceIsEnumerable });
 	}
 
 	getSelectedResource = () => {
@@ -360,14 +391,18 @@ export class ManageResources extends React.Component<Props, State> {
 			dbName: ('New Resource ' + ((newResourceCount === 0) ? '' : newResourceCount)).trim(),
 			name: ('New Resource ' + ((newResourceCount === 0) ? '' : newResourceCount)).trim(),
 			dbIsEnumerable: 1,
-			isEnumerable: 1
-
+			isEnumerable: 1,
+			isEnumerableBoolean: true
 		};
 
 		let resources = this.state.resources.slice(0);
 		resources.push(newResource);
 
-		this.setState({ resources: resources, selectedResource: newResource.name, selectedResourceIndex: resources.length - 1 });
+		this.setState({ 
+			resources: resources, 
+			selectedResource: newResource.name, 
+			selectedResourceIndex: resources.length - 1, 
+			selectedResourceIsEnumerable: true});
 	}
 
 	handleDeleteResource = (index: number) => {
