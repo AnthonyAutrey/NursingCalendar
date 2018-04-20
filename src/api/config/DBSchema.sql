@@ -13,23 +13,23 @@ USE nursing_calendar;
 
 CREATE TABLE Locations
 (
-	LocationName varchar(60) NOT NULL,
+	LocationName VARCHAR(60) NOT NULL,
 	PRIMARY KEY (LocationName)
 );
 
 CREATE TABLE Rooms
 (
-	RoomName varchar(60) NOT NULL,
+	RoomName VARCHAR(60) NOT NULL,
 	Capacity SmallInt,
 	-- if NULL, room should be regarded as having infinite capacity
-	LocationName varchar(60) NOT NULL,
+	LocationName VARCHAR(60) NOT NULL,
 	PRIMARY KEY (RoomName, LocationName),
 	FOREIGN KEY (LocationName) REFERENCES Locations(LocationName) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE Resources
 (
-	ResourceName varchar(60) NOT NULL,
+	ResourceName VARCHAR(60) NOT NULL,
 	IsEnumerable Boolean NOT NULL DEFAULT 1,
 	PRIMARY KEY (ResourceName)
 );
@@ -40,16 +40,15 @@ CREATE TABLE Users
 	FirstName VARCHAR(30) NOT NULL,
 	LastName VARCHAR(30) NOT NULL,
 	UserRole ENUM('student', 'instructor', 'administrator') NOT NULL,
-	PRIMARY KEY
-(CWID)
+	PRIMARY KEY(CWID)
 );
 
 CREATE TABLE Events
 (
 	EventID INT NOT NULL,
-	LocationName varchar(60) NOT NULL,
-	RoomName varchar(60) NOT NULL,
-	Title varchar(60) NOT NULL,
+	LocationName VARCHAR(60) NOT NULL,
+	RoomName VARCHAR(60) NOT NULL,
+	Title VARCHAR(60) NOT NULL,
 	Description VARCHAR(300) NOT NULL,
 	StartTime DateTime NOT NULL,
 	EndTime DateTime NOT NULL,
@@ -96,8 +95,8 @@ CREATE TABLE Notifications
 	CREATE TABLE OverrideRequests
 	(
 		EventID INT NOT NULL,
-		LocationName varchar(60) NOT NULL,
-		RoomName varchar(60) NOT NULL,
+		LocationName VARCHAR(60) NOT NULL,
+		RoomName VARCHAR(60) NOT NULL,
 		Message VARCHAR(300) NOT NULL,
 		OwnerResponse VARCHAR(300),
 		Time DateTime NOT NULL,
@@ -122,9 +121,9 @@ CREATE TABLE Notifications
 
 		CREATE TABLE RoomResourceRelation
 		(
-			LocationName varchar(60) NOT NULL,
-			RoomName varchar(60) NOT NULL,
-			ResourceName varchar(60) NOT NULL,
+			LocationName VARCHAR(60) NOT NULL,
+			RoomName VARCHAR(60) NOT NULL,
+			ResourceName VARCHAR(60) NOT NULL,
 			Count SmallInt,
 			-- if NULL, this resource isn't countable (example: AV capability)
 			PRIMARY KEY (LocationName, RoomName, ResourceName),
@@ -136,8 +135,8 @@ CREATE TABLE Notifications
 		CREATE TABLE EventGroupRelation
 		(
 			EventID INT NOT NULL,
-			LocationName varchar(60) NOT NULL,
-			RoomName varchar(60) NOT NULL,
+			LocationName VARCHAR(60) NOT NULL,
+			RoomName VARCHAR(60) NOT NULL,
 			GroupName VARCHAR(60) NOT NULL,
 			PRIMARY KEY (EventID, LocationName, RoomName, GroupName),
 			FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName) ON UPDATE CASCADE ON DELETE CASCADE,
@@ -157,8 +156,8 @@ CREATE TABLE Notifications
 (
 	RecurringID CHAR(36) NOT NULL, -- uuid
 	EventID INT NOT NULL,
-	LocationName varchar(60) NOT NULL,
-	RoomName varchar(60) NOT NULL,
+	LocationName VARCHAR(60) NOT NULL,
+	RoomName VARCHAR(60) NOT NULL,
 	RecurringType ENUM('daily', 'weekly', 'monthly') NOT NULL,
 	MonthlyWeekday CHAR
 		(2),
