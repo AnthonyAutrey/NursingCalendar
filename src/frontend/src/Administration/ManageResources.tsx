@@ -21,7 +21,6 @@ interface State {
 	selectedResourceIsEnumerable: boolean;
 }
 
-// TODO: Finish adding functionality to this class
 export class ManageResources extends React.Component<Props, State> {
 	constructor(props: Props, state: State) {
 		super(props, state);
@@ -110,14 +109,23 @@ export class ManageResources extends React.Component<Props, State> {
 							</div>
 							{/*TODO Add a tooltip and fix that shizzle*/}
 							<div className="form-group row">
-								<label className="col-lg-4 col-form-label text-left">
-									This resource should be counted for each room: &nbsp;
-							</label>
-								<input
-									type="checkbox"
-									onChange={() => { this.handleChangeResourceIsEnumerable(this.state.selectedResourceIndex); }}
-									checked={this.state.selectedResourceIsEnumerable}
-								/>
+								<label className="col-lg-4 col-form-label text-left">Is this resource&nbsp;
+									<a
+										href="#"
+										data-toggle="tooltip"
+										data-placement="top"
+										title="Countable: There may be more than one of this resource in a room. (Ex: 10 Beds)"
+									>
+										countable
+									</a>
+									?&nbsp;&nbsp;
+									<input
+										type="checkbox"
+										onChange={() => { this.handleChangeResourceIsEnumerable(this.state.selectedResourceIndex); }}
+										checked={this.state.selectedResourceIsEnumerable}
+									/>
+								</label>
+
 							</div>
 							<div className="form-group row">
 								<div className="col-lg-12">
@@ -412,11 +420,17 @@ export class ManageResources extends React.Component<Props, State> {
 			return;
 
 		let newResourceCount = 0;
+		
 		if (this.state.resources.length !== 0)
 			this.state.resources.forEach(resource => {
 				if (resource.name.substr(0, 12) === 'New Resource')
 					newResourceCount++;
 			});
+
+		this.state.resources.forEach(resource => {
+			if (resource.name.trim() === ('New Resource ' + ((newResourceCount <= 0) ? '' : newResourceCount)).trim())
+				newResourceCount++;
+		});
 
 		let newResource: Resource = {
 			dbName: ('New Resource ' + ((newResourceCount === 0) ? '' : newResourceCount)).trim(),

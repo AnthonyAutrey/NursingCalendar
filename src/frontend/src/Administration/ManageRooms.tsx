@@ -81,7 +81,7 @@ export class ManageRooms extends React.Component<Props, State> {
 									className="form-control form-control"
 									type="text"
 									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
-									onChange={this.needsWork}
+									onChange={(e) => this.handleChangeRoomName(e, this.state.selectedRoomIndex)}
 								/>
 							</div>
 						</div>
@@ -139,6 +139,8 @@ export class ManageRooms extends React.Component<Props, State> {
 		request.get('/api/rooms').end((error: {}, res: any) => {
 			if (res && res.body) {
 				let parsedRooms = this.parseRooms(res.body);
+				if (parsedRooms.length === 0)
+					return;
 				this.setState({ rooms: parsedRooms, selectedRoomIndex: 0, initialized: true });
 			} else {
 				alert('Error getting room data! Handle this properly!');
@@ -184,8 +186,15 @@ export class ManageRooms extends React.Component<Props, State> {
 			return;
 
 		let newRoomCount = 0;
+
+		if (this.state.rooms.length !== 0)
+			this.state.rooms.forEach(room => {
+				if (room.roomName.substr(0, 8) === 'New Room')
+					newRoomCount++;
+			});
+
 		this.state.rooms.forEach(room => {
-			if (room.roomName.substr(0, 8) === 'New Room')
+			if (room.roomName.trim() === ('New Room ' + ((newRoomCount <= 0) ? '' : newRoomCount)).trim())
 				newRoomCount++;
 		});
 
@@ -216,7 +225,15 @@ export class ManageRooms extends React.Component<Props, State> {
 
 		let roomName = event.target.value;
 		let roomIndex = this.getSelectedRoomIndex(roomName);
-		this.setState({selectedRoomIndex: roomIndex });
+		this.setState({ selectedRoomIndex: roomIndex });
+	}
+
+	handleChangeRoomName = (event: any, index: number) => {
+		if (event.target.value.length <= 60) {
+			let rooms = this.state.rooms.slice(0);
+			rooms[index].roomName = event.target.value;
+			this.setState({ rooms: rooms, selectedRoomIndex: index });
+		}
 	}
 
 	getSelectedRoomIndex = (roomName: String): number => {
@@ -228,8 +245,11 @@ export class ManageRooms extends React.Component<Props, State> {
 
 		return index;
 	}
-
+	// TODO: Finish adding necessary checks
 	doValidityChecks(): boolean {
+		if (this.state.rooms.length === 0)
+			return true;
+
 		if (this.roomNameIsTaken()) {
 			alert('The room name you\'ve chosen is already being used. Please enter a valid room name before continuing.');
 			return false;
@@ -246,7 +266,7 @@ export class ManageRooms extends React.Component<Props, State> {
 		let selectedRoom: TempRoom = this.getSelectedRoom();
 		let roomNameIsTaken: boolean = false;
 		this.state.rooms.forEach((room, index) => {
-			if (room.locationName === selectedRoom.locationName && 
+			if (room.locationName === selectedRoom.locationName &&
 				room.roomName === selectedRoom.roomName && Number(index) !== Number(this.state.selectedRoomIndex))
 				roomNameIsTaken = true;
 		});
