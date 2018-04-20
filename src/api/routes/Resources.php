@@ -65,7 +65,7 @@ $app->post('/resources', function (Request $request, Response $response, array $
 // Delete //
 $app->delete('/resources', function (Request $request, Response $response, array $args) {
 	$queryData = getDeleteQueryData($request);
-	$deleteQuery = DBUtil::buildDeleteQuery('resources NATURAL JOIN	roomResourceRelation', $queryData['where']);
+	$deleteQuery = DBUtil::buildDeleteQuery('resources', $queryData['where']);
 	$results = DBUtil::runCommand($deleteQuery);
 	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
