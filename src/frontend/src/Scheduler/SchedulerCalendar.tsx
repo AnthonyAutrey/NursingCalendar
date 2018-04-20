@@ -468,7 +468,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				}
 			});
 
+			console.log('begin getting recurring relations api call');
+			console.log(queryData);
 			request.get('/api/recurringeventrelations').set('queryData', queryData).end((error: {}, res: any) => {
+				console.log('end gettign recurring relations api call');
 				if (res && res.body)
 					resolved(this.parseRecurringRelations(res.body));
 				else
@@ -491,8 +494,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	persistRecurringEvents = (): Promise<null> => {
+		console.log('enter persist recurring');
 		return new Promise((resolved, reject) => {
 			this.getRecurringRelationsForRoomFromDB().then(recurringRelations => {
+				console.log('just finished getting recurring relations for room');
 
 				let recurringRelationsToAdd = this.getRecurringRelationsToAddToDB(recurringRelations);
 				console.log('Recurring Relations to Add');
@@ -508,8 +513,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				];
 
 				Promise.all(promises).then(() => {
+					console.log('resolved thing');
 					resolved();
 				}).catch(() => {
+					console.log('rejected thing');
 					reject();
 				});
 
@@ -520,11 +527,18 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	getRecurringRelationsToAddToDB = (recurringRelations: { uuid: string, eventID: string }[]) => {
+		console.log('get recurring relations to add');
+
+		let recurringRelationValues: Set<string> = new Set();
+		recurringRelations.forEach(relation => {
+			recurringRelationValues.add(relation.eventID + relation.uuid);
+		});
+
 		let recurringEventsToAdd = this.getStateEventsAsArray().filter(event => {
-			let matchingRecurringRelation = recurringRelations.find(relation => {
-				return Number(relation.eventID) === Number(event.id) && event.recurringInfo !== undefined && relation.uuid === event.recurringInfo.id;
-			});
-			return event.recurringInfo && !matchingRecurringRelation;
+			// let matchingRecurringRelation = recurringRelations.find(relation => {
+			// 	return Number(relation.eventID) === Number(event.id) && event.recurringInfo !== undefined && relation.uuid === event.recurringInfo.id;
+			// });
+			return event.recurringInfo && !recurringRelationValues.has(event.id + event.recurringInfo.id);
 		});
 
 		let recurringRelationsToAdd = recurringEventsToAdd.map(event => {
@@ -552,12 +566,18 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	getRecurringRelationsToDeleteFromDB = (recurringRelations: { uuid: string, eventID: string }[]) => {
-		let recurringRelationsToDelete = recurringRelations.filter(relation => {
-			let matchingEvent = this.getStateEventsAsArray().find(event => {
-				return Number(relation.eventID) === Number(event.id) && event.recurringInfo !== undefined && relation.uuid === event.recurringInfo.id;
-			});
+		console.log('get recurring relations to delete');
+		let eventRelationValues: Set<string> = new Set();
+		this.getStateEventsAsArray().forEach(event => {
+			if (event.recurringInfo)
+				eventRelationValues.add(event.id + event.recurringInfo.id);
+		});
 
-			return !matchingEvent;
+		let recurringRelationsToDelete = recurringRelations.filter(dbRelation => {
+			// let matchingEvent = this.getStateEventsAsArray().find(event => {
+			// 	return Number(relation.eventID) === Number(event.id) && event.recurringInfo !== undefined && relation.uuid === event.recurringInfo.id;
+			// });
+			return !eventRelationValues.has(dbRelation.eventID + dbRelation.uuid);
 		});
 
 		let completedRecurringRelationsToDelete = recurringRelationsToDelete.map(relation => {
@@ -579,31 +599,24 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				return;
 			}
 
-			// let queryData: {}[] = recurringRelations.map(relation => {
-			// 	return {
-			// 		insertValues: relation
-			// 	};
-			// });
-
-			let queryData = {
-				insertValues: {
-					RecurringID: recurringRelations.map((rel: any) => { return rel.RecurringID; }),
-					EventID: recurringRelations.map((rel: any) => { return rel.EventID; }),
-					LocationName: recurringRelations.map((rel: any) => { return rel.LocationName; }),
-					RoomName: recurringRelations.map((rel: any) => { return rel.RoomName; }),
-					RecurringType: recurringRelations.map((rel: any) => { return rel.RecurringType; }),
-					MonthlyWeekday: recurringRelations.map((rel: any) => { return rel.MonthlyWeekday; }),
-					WeeklyDays: recurringRelations.map((rel: any) => { return rel.WeeklyDays; })
-				}
-			};
-
-			let queryDataString = JSON.stringify(queryData);
-			request.put('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
-				if (res && res.body)
-					resolved();
-				else
-					reject();
+			let queryData: {}[] = recurringRelations.map(relation => {
+				return {
+					insertValues: relation
+				};
 			});
+
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 20);
+				queryData.splice(0, 20);
+
+				let queryDataString = JSON.stringify(queryDataPart);
+				request.put('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body)
+						resolved();
+					else
+						reject();
+				});
+			}
 		});
 	}
 
@@ -627,7 +640,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let deleteAllPromises: Promise<null>[] = [];
 			queryDataArray.forEach(queryData => {
-				console.log(queryData);
 				deleteAllPromises.push(new Promise((resolveDelete, rejectDelete) => {
 					let queryDataString = JSON.stringify(queryData);
 					request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
@@ -901,28 +913,49 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	// Event Persistence /////////////////////////////////////////////////////////////////////////////////////////////////
 	persistStateToDB(): void {
-		console.log('persisting');
+		this.setState({ loading: true });
 		let persistPromises: Promise<any>[] = [];
 		persistPromises.push(this.deleteDBEventsNotInClient());
 
 		persistPromises.push(new Promise((resolved, reject) => {
 			this.getClientEventIDsThatAreAlreadyInDB().then((eventIDsInDB) => {
 				this.sendNotificationsToOwnersIfModifiedByNonOwner(eventIDsInDB);
-				this.updateExistingEventsInDB(eventIDsInDB).then(() => {
-					let eventsNotInDB = this.getClientEventsNotYetInDB(eventIDsInDB);
-					let promises = [
-						// this.persistRecurringEvents(),
-						this.persistNewEventsToDB(eventsNotInDB)
-					];
 
-					Promise.all(promises).then(() => resolved()).catch(() => reject());
-				}).catch(() => reject());
+				let persistNewEventsThenRecurringEvents = new Promise((res, rej) => {
+					let eventsNotInDB = this.getClientEventsNotYetInDB(eventIDsInDB);
+
+					this.persistNewEventsToDB(eventsNotInDB).then(() => {
+						this.persistRecurringEvents().then(() => {
+							console.log('resolve persistRE');
+							res();
+						}).catch(() => {
+							rej();
+						});
+					}).catch(() => {
+						rej();
+					});
+				});
+
+				let promises: Promise<any>[] = [
+					this.updateExistingEventsInDB(eventIDsInDB),
+					persistNewEventsThenRecurringEvents
+				];
+
+				Promise.all(promises).then(() => {
+					console.log('resolved');
+					resolved();
+				}).catch(() => {
+					console.log('rejected');
+					reject();
+				});
 			}).catch(() => reject());
 		}));
 
 		Promise.all(persistPromises).then(() => {
+			console.log('~~~~~~~~~~~~~~Finished Persisting!!');
 			this.props.handleToolbarMessage('Changes saved successfully!', 'success');
 			this.eventCache = this.cloneStateEvents();
+			this.setState({ loading: false });
 		}).catch(() => {
 			this.props.handleToolbarMessage('Error saving data.', 'error');
 		});
@@ -1056,14 +1089,24 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				});
 			});
 
-			let queryDataString = JSON.stringify(queryData);
-			request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-				if (res && res.body) {
-					this.logEventUpdates(eventsToUpdate);
-					resolved();
-				} else
-					reject();
-			});
+			let promises = [];
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 15);
+				queryData.splice(0, 15);
+
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryDataPart);
+					request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+						if (res && res.body) {
+							this.logEventUpdates(eventsToUpdate);
+							resAPI();
+						} else
+							rejAPI();
+					});
+				}));
+			}
+
+			Promise.all(promises).then(() => { resolved(); }).catch(() => { reject(); });
 		});
 	}
 
@@ -1078,17 +1121,16 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	persistNewEventsToDB(events: Event[]): Promise<any> {
-		return new Promise((resolveOuter, rejectOuter) => {
+		return new Promise((resolved, reject) => {
 			let eventsToCreate: Event[] = [];
 			events.forEach(event => {
 				eventsToCreate.push(event);
 			});
 
-			let persistNewEventsPromises: Promise<any>[] = [];
-
+			let queryData: {}[] = [];
 			eventsToCreate.forEach((event) => {
-				persistNewEventsPromises.push(new Promise((resolved, reject) => {
-					let insertValues: {} = {
+				queryData.push({
+					insertValues: {
 						'CWID': this.props.cwid,
 						'EventID': event.id,
 						'LocationName': this.props.location,
@@ -1097,24 +1139,52 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 						'Description': event.description,
 						'StartTime': event.start,
 						'EndTime': event.end
-					};
-
-					let queryData = {
-						groups: event.groups,
-						insertValues: insertValues
-					};
-					let queryDataString = JSON.stringify(queryData);
-					request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-						if (res && res.body) {
-							// this.logEventCreations([event]);
-							resolved();
-						} else
-							reject();
-					});
-				}));
+					},
+					groups: event.groups
+				});
 			});
 
-			Promise.all(persistNewEventsPromises).then(() => resolveOuter()).catch(() => rejectOuter());
+			if (queryData.length <= 0) {
+				resolved();
+				return;
+			}
+
+			// while (queryData.length > 0) {
+			// 	let queryDataPart = queryData.slice(0, 15);
+			// 	queryData.splice(0, 15);
+
+			// 	let queryDataString = JSON.stringify(queryDataPart);
+			// 	console.log(queryDataPart);
+			// 	console.log(queryData);
+			// 	console.log('..............');
+			// 	request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+			// 		if (res && res.body)
+			// 			resolved();
+			// 		else
+			// 			reject();
+			// 	});
+			// }
+
+			let promises = [];
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 15);
+				queryData.splice(0, 15);
+
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryDataPart);
+					console.log(queryDataPart);
+					console.log(queryData);
+					console.log('..............');
+					request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+						if (res && res.body) {
+							resAPI();
+						} else
+							rejAPI();
+					});
+				}));
+			}
+
+			Promise.all(promises).then(() => { resolved(); }).catch(() => { reject(); });
 		});
 	}
 

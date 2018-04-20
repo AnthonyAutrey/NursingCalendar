@@ -9,7 +9,6 @@ use \Psr\Http\Message\ResponseInterface as Response;
 $app->put('/events', function (Request $request, Response $response, array $args) {
 	$queryDataArray = getInsertQueryData($request);
 	$results = [];
-	$queryString = "";
 
 	if (array_key_exists("insertValues",$queryDataArray))
 		$queryDataArray = [$queryDataArray];
@@ -28,14 +27,14 @@ $app->put('/events', function (Request $request, Response $response, array $args
 		$location = $queryData['insertValues']['LocationName'];
 		$room = $queryData['insertValues']['RoomName'];
 
-		$queryString .= DBUtil::buildInsertQuery('events', $queryData['insertValues']).';';
-		
+		$queryString = DBUtil::buildInsertQuery('events', $queryData['insertValues']);
+		$results['Insert Event '.', '.$eventID.', '.$location.', '.$room] = DBUtil::runCommand($queryString);
+
 		if (isset($queryData['groups']) && !is_null($queryData['groups'])) {
 			$results['Insert Groups '.', '.$eventID.', '.$location.', '.$room] = insertEventGroups($queryData['groups'], $eventID, $location, $room);
 		}
 	}
-	if ($queryString !== "")
-		$results['Insert Event '.', '.$eventID.', '.$location.', '.$room] = DBUtil::runCommand($queryString);
+
 	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;

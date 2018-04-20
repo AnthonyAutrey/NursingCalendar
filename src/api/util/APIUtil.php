@@ -133,21 +133,28 @@ function getEventGroupsToInsert(Request $request) : array {
 	return sanitize($groups);
 }
 
-function insertEventGroups($groups, $eventID, $location, $room) : String {
+function insertEventGroups($groups, $eventID, $location, $room) : array {
 	$groupsToInsert = $groups;
 	$insertResults = [];
-	$groupRelationQueryString = "";
+	$queries = [""];
+
 	foreach ($groupsToInsert as $groupToInsert) {
 		$groupInsertValues = array();
 		$groupInsertValues['EventID'] = $eventID;
 		$groupInsertValues['LocationName'] = $location;
 		$groupInsertValues['RoomName'] = $room;
 		$groupInsertValues['GroupName'] = $groupToInsert;
-		$groupRelationQueryString .= DBUtil::buildInsertQuery('EventGroupRelation', $groupInsertValues).';';
+
+		if (strlen($queries[count($queries) - 1]) > 100)
+			array_push($queries, "");
+
+		$queries[count($queries) - 1] .= DBUtil::buildInsertQuery('EventGroupRelation', $groupInsertValues) . ';';
 	}
-	
-	if ($groupRelationQueryString !== "")
-		$insertResults[$groupToInsert] = DBUtil::runCommand($groupRelationQueryString);
+
+	foreach ($queries as $query) {
+		if ($query !== "")
+			$insertResults[$groupToInsert] = DBUtil::runCommand($query);
+	}
 
 	return $insertResults;
 }
