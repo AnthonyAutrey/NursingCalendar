@@ -1100,8 +1100,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let promises = [];
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 20);
-				queryData.splice(0, 20);
+				let queryDataPart = queryData.slice(0, 15);
+				queryData.splice(0, 15);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
@@ -1178,8 +1178,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let promises = [];
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 20);
-				queryData.splice(0, 20);
+				let queryDataPart = queryData.slice(0, 17);
+				queryData.splice(0, 17);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
@@ -1327,8 +1327,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		});
 
 		while (queryData.length > 0) {
-			let queryDataPart = queryData.slice(0, 30);
-			queryData.splice(0, 30);
+			let queryDataPart = queryData.slice(0, 20);
+			queryData.splice(0, 20);
 
 			let queryDataString = JSON.stringify(queryDataPart);
 			request.put('/api/logs').set('queryData', queryDataString).end();

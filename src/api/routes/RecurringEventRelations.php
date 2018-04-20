@@ -9,6 +9,7 @@ use \Psr\Http\Message\ResponseInterface as Response;
 $app->put('/recurringeventrelations', function (Request $request, Response $response, array $args) {
 	$queryDataArray = getInsertQueryData($request);
 	$results = [];
+	$queries = [""];	
 
 	if (array_key_exists("insertValues",$queryDataArray))
 		$queryDataArray = [$queryDataArray];
@@ -22,9 +23,16 @@ $app->put('/recurringeventrelations', function (Request $request, Response $resp
 		!isset($queryData['insertValues']['RoomName'])) {
 			return $response->withStatus(400);
 		}
-		
-		$queryString = DBUtil::buildInsertQuery('RecurringEventRelation', $queryData['insertValues']);
-		array_push($results, DBUtil::runCommand($queryString));
+
+		if (strlen($queries[count($queries) - 1]) > 100)
+			array_push($queries, "");
+
+		$queries[count($queries) - 1] .= DBUtil::buildInsertQuery('RecurringEventRelation', $queryData['insertValues']) . ';';
+	}
+
+	foreach ($queries as $query) {
+		if ($query !== "")
+			array_push($results, DBUtil::runCommand($query));
 	}
 
 	$response->getBody()->write(json_encode($results));

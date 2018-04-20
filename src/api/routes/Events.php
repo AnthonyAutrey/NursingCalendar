@@ -9,6 +9,7 @@ use \Psr\Http\Message\ResponseInterface as Response;
 $app->put('/events', function (Request $request, Response $response, array $args) {
 	$queryDataArray = getInsertQueryData($request);
 	$results = [];
+	$queries = [""];	
 
 	if (array_key_exists("insertValues",$queryDataArray))
 		$queryDataArray = [$queryDataArray];
@@ -22,13 +23,22 @@ $app->put('/events', function (Request $request, Response $response, array $args
 			!insertQueryDataIsValid($queryData['insertValues'])) {
 			return $response->withStatus(400);
 		}
-	
+
+		if (strlen($queries[count($queries) - 1]) > 100)
+			array_push($queries, "");
+
+		$queries[count($queries) - 1] .= DBUtil::buildInsertQuery('events', $queryData['insertValues']) . ';';
+	}
+
+	foreach ($queries as $query) {
+		if ($query !== "")
+			array_push($results, DBUtil::runCommand($query));
+	}
+
+	foreach ($queryDataArray as $queryData) {
 		$eventID = $queryData['insertValues']['EventID'];
 		$location = $queryData['insertValues']['LocationName'];
 		$room = $queryData['insertValues']['RoomName'];
-
-		$queryString = DBUtil::buildInsertQuery('events', $queryData['insertValues']);
-		$results['Insert Event '.', '.$eventID.', '.$location.', '.$room] = DBUtil::runCommand($queryString);
 
 		if (isset($queryData['groups']) && !is_null($queryData['groups'])) {
 			$results['Insert Groups '.', '.$eventID.', '.$location.', '.$room] = insertEventGroups($queryData['groups'], $eventID, $location, $room);
@@ -118,6 +128,7 @@ $app->get('/eventswithrelations', function (Request $request, Response $response
 $app->post('/events', function (Request $request, Response $response, array $args) {
 	$results = [];
 	$queryDataArray = getUpdateQueryData($request);
+	$queries = [""];	
 
 	if (array_key_exists("setValues",$queryDataArray) && array_key_exists("where",$queryDataArray))
 		$queryDataArray = [$queryDataArray];
@@ -144,9 +155,16 @@ $app->post('/events', function (Request $request, Response $response, array $arg
 			$results['Delete Groups '.$eventID.', '.$location.', '.$room] = DBUtil::runCommand($deleteGroupsQuery);
 			$results['Insert Groups '.$eventID.', '.$location.', '.$room] = insertEventGroups($queryData['groups'], $eventID, $location, $room);
 		}
-	
-		$queryString = DBUtil::buildUpdateQuery('events', $queryData['setValues'], $queryData['where']);	
-		$results['Update Event '.$eventID.', '.$location.', '.$room] = DBUtil::runCommand($queryString);
+
+		if (strlen($queries[count($queries) - 1]) > 100)
+			array_push($queries, "");
+
+		$queries[count($queries) - 1] .= DBUtil::buildUpdateQuery('events', $queryData['setValues'], $queryData['where']) . ';';
+	}
+
+	foreach ($queries as $query) {
+		if ($query !== "")
+			array_push($results, DBUtil::runCommand($query));
 	}
 
 	$response->getBody()->write(json_encode($results));
