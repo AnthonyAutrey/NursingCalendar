@@ -162,7 +162,20 @@ export class ManageRooms extends React.Component<Props, State> {
 			};
 			rooms.push(room);
 		});
-
+		if (rooms.length === 0) {
+			let newRoom: TempRoom = {
+				locationName: '',
+				dbLocationName: '',
+				roomName: 'New Room',
+				dbRoomName: 'New Room',
+				capacity: 0,
+				dbCapacity: 0,
+				resources: [],
+				dbResources: []
+			};
+			rooms.push(newRoom);
+		}
+		console.log(rooms);
 		return rooms;
 	}
 

@@ -123,11 +123,12 @@ export class ManageResources extends React.Component<Props, State> {
 			if (res && res.body) {
 				let parsedResources = this.parseResources(res.body);
 				let initialResourceIsEnumerableCheckValue = parsedResources[0].isEnumerableBoolean;
-				this.setState({ 
-					resources: parsedResources, 
-					selectedResource: parsedResources[0].name, 
-					selectedResourceIndex: 0, 
-					selectedResourceIsEnumerable: initialResourceIsEnumerableCheckValue});
+				this.setState({
+					resources: parsedResources,
+					selectedResource: parsedResources[0].name,
+					selectedResourceIndex: 0,
+					selectedResourceIsEnumerable: initialResourceIsEnumerableCheckValue
+				});
 			} else {
 				alert('Error getting resource data! Handle this properly!');
 				this.props.handleShowAlert('error', 'Error getting class data.');
@@ -148,6 +149,16 @@ export class ManageResources extends React.Component<Props, State> {
 			resources.push(resource);
 		});
 
+		if (resources.length === 0) {
+			let newResource: Resource = {
+				dbName: 'New Resource',
+				name: 'New Resource',
+				dbIsEnumerable: 1,
+				isEnumerable: 1,
+				isEnumerableBoolean: true
+			};
+			resources.push(newResource);
+		}
 		return resources;
 	}
 
@@ -238,6 +249,10 @@ export class ManageResources extends React.Component<Props, State> {
 	}
 
 	deleteResourcesFromDB = (resourceNames: string[]) => {
+		// TODO: Is this okay???
+		if (this.state.resources.length === 0)
+			this.handleAddResource();
+
 		return new Promise((resolve, reject) => {
 			if (resourceNames.length <= 0) {
 				resolve();
@@ -339,7 +354,7 @@ export class ManageResources extends React.Component<Props, State> {
 		let resourceName = event.target.value;
 		let resourceIndex = this.getSelectedResourceIndex(resourceName);
 		let resourceIsEnumerable = this.state.resources[resourceIndex].isEnumerableBoolean;
-		this.setState({ selectedResource: resourceName, selectedResourceIndex: resourceIndex, selectedResourceIsEnumerable: resourceIsEnumerable});
+		this.setState({ selectedResource: resourceName, selectedResourceIndex: resourceIndex, selectedResourceIsEnumerable: resourceIsEnumerable });
 	}
 
 	handleChangeResourceName = (event: any, index: number) => {
@@ -359,7 +374,6 @@ export class ManageResources extends React.Component<Props, State> {
 			resources[index].isEnumerable = 1;
 			resources[index].isEnumerableBoolean = true;
 		}
-		console.log(resources[index]);
 		this.setState({ resources: resources, selectedResourceIsEnumerable: !this.state.selectedResourceIsEnumerable });
 	}
 
@@ -398,11 +412,12 @@ export class ManageResources extends React.Component<Props, State> {
 		let resources = this.state.resources.slice(0);
 		resources.push(newResource);
 
-		this.setState({ 
-			resources: resources, 
-			selectedResource: newResource.name, 
-			selectedResourceIndex: resources.length - 1, 
-			selectedResourceIsEnumerable: true});
+		this.setState({
+			resources: resources,
+			selectedResource: newResource.name,
+			selectedResourceIndex: resources.length - 1,
+			selectedResourceIsEnumerable: true
+		});
 	}
 
 	handleDeleteResource = (index: number) => {
@@ -412,20 +427,49 @@ export class ManageResources extends React.Component<Props, State> {
 		let resources = this.state.resources.slice(0);
 		resources.splice(index, 1);
 
-		this.setState({ resources: resources, selectedResource: this.state.resources[0].name, selectedResourceIndex: 0 });
+		if (resources.length === 0) {
+			let newResource: Resource = {
+				dbName: 'New Resource ',
+				name: 'New Resource ',
+				dbIsEnumerable: 1,
+				isEnumerable: 1,
+				isEnumerableBoolean: true
+			};
+			resources.push(newResource);
+			this.setState({ resources: resources, selectedResource: resources[0].name, selectedResourceIndex: 0, selectedResourceIsEnumerable: true });
+		} else
+			this.setState({ resources: resources, selectedResource: resources[0].name, selectedResourceIndex: 0 });
 	}
 
 	doValidityChecks(): boolean {
-		if (this.resourceNameIsTaken()) {
-			alert('The resource name you\'ve chosen is already being used. Please enter a valid resource name before continuing.');
-			return false;
-		}
-		if (this.resourceNameIsEmpty()) {
-			alert('The current resource name is empty. Please enter a valid resource name before continuing.');
-			return false;
-		}
+		// TODO Is this okay?
+		let isValid = true;
+		let checkForEmptyResourceArray: Promise<Resource[]> = new Promise((resolve, reject) => {
+			if (this.state.resources.length === 0) {
+				let resources: Resource[] = [];
+				let newResource: Resource = {
+					dbName: 'New Resource ',
+					name: 'New Resource ',
+					dbIsEnumerable: 1,
+					isEnumerable: 1,
+					isEnumerableBoolean: true
+				};
+				resources.push(newResource);
+				this.setState({ resources: resources, selectedResource: resources[0].name, selectedResourceIndex: 0, selectedResourceIsEnumerable: true });
+			}
+		});
 
-		return true;
+		checkForEmptyResourceArray.then(() => {
+			if (this.resourceNameIsTaken()) {
+				alert('The resource name you\'ve chosen is already being used. Please enter a valid resource name before continuing.');
+				isValid = false;
+			}
+			if (this.resourceNameIsEmpty()) {
+				alert('The current resource name is empty. Please enter a valid resource name before continuing.');
+				isValid = false;
+			}
+		});
+		return isValid;
 	}
 
 	resourceNameIsTaken = (): boolean => {
