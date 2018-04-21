@@ -224,37 +224,42 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		if (this.state.requestMessage.length < 1)
 			alert('Please include a message with your request.');
 		else {
-			new Promise((resolve, reject) => {
-				if (!this.state.event)
-					reject();
-				else {
-					let queryData = {
-						insertValues: {
-							'EventID': this.state.event.id,
-							'LocationName': this.state.event.location,
-							'RoomName': this.state.event.room,
-							'Message': this.state.requestMessage,
-							'Time': this.getCurrentDateTimeInSqlFormat(),
-							'RequestorCWID': this.props.cwid
-						}
-					};
-					let queryDataString = JSON.stringify(queryData);
-					request.put('/api/overriderequests').set('queryData', queryDataString).end((error: {}, res: any) => {
-						if (res && res.body) {
-							resolve();
-							console.log('created override request: ' + JSON.stringify(res.body));
-						} else
-							reject();
-					});
-				}
-			}).then(() => {
+			this.persistOverrideRequest().then(() => {
 				if (this.state.event)
-					this.props.handleOverrideRequest(this.state.event.id);
+					this.props.handleOverrideRequest(this.state.event.id, this.state.requestForAllRecurring);
 			}).catch(() => {
 				// TODO: handle failure better
 				alert('Something went wrong!');
 			});
 		}
+	}
+
+	private persistOverrideRequest = (): Promise<void> => {
+		return new Promise((resolve, reject) => {
+			if (!this.state.event)
+				reject();
+			else {
+				let queryData = {
+					insertValues: {
+						'EventID': this.state.event.id,
+						'LocationName': this.state.event.location,
+						'RoomName': this.state.event.room,
+						'Message': this.state.requestMessage,
+						'Time': this.getCurrentDateTimeInSqlFormat(),
+						'RequestorCWID': this.props.cwid,
+						'RecurringEventRequest': this.state.requestForAllRecurring ? 1 : 0
+					}
+				};
+				let queryDataString = JSON.stringify(queryData);
+				request.put('/api/overriderequests').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body) {
+						resolve();
+						console.log('created override request: ' + JSON.stringify(res.body));
+					} else
+						reject();
+				});
+			}
+		});
 	}
 
 	private getCurrentDateTimeInSqlFormat = () => {

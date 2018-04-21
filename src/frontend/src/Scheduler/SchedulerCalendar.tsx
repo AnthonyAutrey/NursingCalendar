@@ -43,6 +43,7 @@ export interface Event {
 	ownerName: string;
 	groups: string[];
 	pendingOverride: boolean;
+	overrideRecurring?: boolean;
 	recurringInfo?: RecurringEventInfo;
 	color?: string;
 }
@@ -714,6 +715,22 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		}
 	}
 
+	addPendingOverrideToEntireRecurringEvent = (event: Event): Map<number, Event> => {
+		let eventMap = this.cloneStateEvents();
+		if (event.recurringInfo) {
+			let recurringID = event.recurringInfo.id;
+			let events = this.getStateEventsAsArray().forEach(stateEvent => {
+				if (stateEvent.recurringInfo && stateEvent.recurringInfo.id === recurringID) {
+					let modifiedEvent = this.cloneEvent(stateEvent);
+					modifiedEvent.pendingOverride = true;
+					eventMap.set(stateEvent.id, modifiedEvent);
+				}
+			});
+		}
+
+		return eventMap;
+	}
+
 	handleEventDeletion = (eventID: number, deleteAllRecurring: boolean = false) => {
 		let events = this.cloneStateEvents();
 		let eventToDelete = events.get(eventID);
@@ -757,10 +774,11 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			this.unownedEventModal.beginEdit(event);
 	}
 
-	handleOverrideRequest = (eventID: number) => {
+	handleOverrideRequest = (eventID: number, overrideRecurring: boolean) => {
 		let events: Map<number, Event> = this.cloneStateEvents();
 		let eventWithRequest: Event | undefined = events.get(eventID);
 		if (eventWithRequest) {
+			events = this.addPendingOverrideToEntireRecurringEvent(eventWithRequest);
 			eventWithRequest.pendingOverride = true;
 			events.set(eventID, eventWithRequest);
 			this.setState({ events: events });
@@ -815,6 +833,24 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				event.recurringInfo = recurringInfo;
 				events.set(event.id, event);
 			}
+		});
+
+		let recurringIDsWithPendingOverrideRequests = new Set();
+		for (let event of Array.from(events.values())) {
+			if (event.overrideRecurring && event.recurringInfo)
+				recurringIDsWithPendingOverrideRequests.add(event.recurringInfo.id);
+		}
+
+		let eventsToAddPendingOverrideTo: Event[] = [];
+		events.forEach(event => {
+			if (event.recurringInfo && recurringIDsWithPendingOverrideRequests.has(event.recurringInfo.id)) {
+				eventsToAddPendingOverrideTo.push(event);
+			}
+		});
+
+		eventsToAddPendingOverrideTo.forEach(event => {
+			event.pendingOverride = true;
+			events.set(event.id, event);
 		});
 
 		return events;
@@ -893,6 +929,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	parseDBEvents(body: any): Map<number, Event> {
 		let parsedEvents: Map<number, Event> = new Map();
+
 		for (let event of body) {
 			let userOwnsEvent: boolean = Number(event.CWID) === Number(this.props.cwid) || this.props.role === 'administrator';
 			let color = '#800029';
@@ -925,6 +962,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				borderColor: borderColor,
 				editable: userOwnsEvent
 			};
+
+			if (event.RecurringOverrideRequest && event.RecurringOverrideRequest === 1)
+				parsedEvent.overrideRecurring = true;
 
 			parsedEvents.set(event.EventID, parsedEvent);
 		}

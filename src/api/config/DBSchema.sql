@@ -100,6 +100,7 @@ CREATE TABLE OverrideRequests
 	Denied Boolean NOT NULL DEFAULT 0,
 	RequestorCWID INT NOT NULL,
 	AdminRequested Boolean NOT NULL DEFAULT 0,
+	RecurringEventRequest Boolean NOT NULL DEFAULT 0,
 	PRIMARY KEY (EventID, LocationName, RoomName),
 	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName),
 	FOREIGN KEY (RequestorCWID) REFERENCES Users(CWID)

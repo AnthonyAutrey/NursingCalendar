@@ -42,6 +42,8 @@ export interface OverrideRequestData {
 	fromCWID: number;
 	ownerCWID: number;
 	fromName: string;
+	recurringOverrideRequest?: boolean;
+	recurringID?: string;
 }
 
 export class NotificationDropdown extends React.Component<Props, State> {
@@ -296,7 +298,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 					handleShowEvent={(event: Event) => this.handleShowEvent(event)}
 					handleGrant={this.handleOverrideRequestGrant}
 					handleDeny={this.handleOverrideRequestDeny}
-					isAdminRequest={false}
+					recurringOverrideRequest={overrideRequest.recurringOverrideRequest || false}
 				/>
 			);
 		});
@@ -414,6 +416,9 @@ export class NotificationDropdown extends React.Component<Props, State> {
 	}
 
 	parseOverriderRequestsFromDB = (dbOverrideRequests: any): OverrideRequestData[] => {
+
+		console.log('dbOverrideRequests');
+		console.log(dbOverrideRequests);
 		let overrideRequests: OverrideRequestData[] = dbOverrideRequests.map((dbOverrideRequest: any) => {
 			let adminRequested = false;
 			if (Number(dbOverrideRequest.AdminRequested) === 1)
@@ -440,6 +445,14 @@ export class NotificationDropdown extends React.Component<Props, State> {
 				fromName: dbOverrideRequest.RequestorFirstName + ' ' + dbOverrideRequest.RequestorLastName
 			};
 
+			if (dbOverrideRequest.RecurringID)
+				overrideRequest.recurringID = dbOverrideRequest.RecurringID;
+
+			console.log(dbOverrideRequest);
+
+			if (dbOverrideRequest.RecurringEventRequest && dbOverrideRequest.RecurringEventRequest === 1)
+				overrideRequest.recurringOverrideRequest = true;
+
 			return overrideRequest;
 		});
 
@@ -448,43 +461,119 @@ export class NotificationDropdown extends React.Component<Props, State> {
 
 	handleOverrideRequestGrant = (index: number, reply: string) => {
 		let overrideRequestToGrant: OverrideRequestData = this.state.overrideRequests[index];
-		let queryData = {
-			setValues: {
-				'Title': 'Reserved',
-				'Description': 'This event has been reserved following a timeslot request',
-				'CWID': overrideRequestToGrant.fromCWID
-			},
-			where: {
-				EventID: overrideRequestToGrant.event.id,
-				RoomName: overrideRequestToGrant.event.room,
-				LocationName: overrideRequestToGrant.event.location
-			},
-			groups: []
-		};
-		let queryDataString = JSON.stringify(queryData);
-		request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (res && res.body) {
-				let path: string = overrideRequestToGrant.event.id + '/' + overrideRequestToGrant.event.location +
-					'/' + overrideRequestToGrant.event.room;
-				request.delete('/api/overriderequests/' + path).end((err: {}, delRes: any) => {
-					if (delRes && delRes.body) {
-						this.sendOverrideGrantMessageToRequestor(overrideRequestToGrant, reply);
-						if (overrideRequestToGrant.adminRequested)
-							this.sendOverrideGrantMessageToOwner(overrideRequestToGrant, reply);
-						let overrideRequests = this.state.overrideRequests.slice(0);
-						overrideRequests.splice(index, 1);
 
-						if (Number(this.state.notifications.length + overrideRequests.length) <= 0)
-							this.setState({ overrideRequests: overrideRequests, open: false });
-						else
-							this.setState({ overrideRequests: overrideRequests });
+		if (overrideRequestToGrant.recurringOverrideRequest && overrideRequestToGrant.recurringID)
+			// if recurring override, set events to reserve to be all matching with override uuid
+			this.getMatchingRecurringEventsFromDB(overrideRequestToGrant.recurringID).then((matchingEventDetails) => {
+				this.reserveEventsAndSendNotifications(matchingEventDetails, overrideRequestToGrant, reply, index);
+			});
+		else {
+			let eventDetails = [{
+				id: overrideRequestToGrant.event.id,
+				location: overrideRequestToGrant.event.location,
+				room: overrideRequestToGrant.event.room
+			}];
+			this.removeRecurrenceRelationForReservedEvent(overrideRequestToGrant.event);
+			this.reserveEventsAndSendNotifications(eventDetails, overrideRequestToGrant, reply, index);
+		}
+
+	}
+
+	reserveEventsAndSendNotifications = (
+		eventDetails: { id: number, location: string, room: string }[],
+		overrideRequestToGrant: OverrideRequestData,
+		reply: string,
+		index: number) => {
+
+		let promises: Promise<void>[] = [];
+		eventDetails.forEach(eventDetail => {
+			promises.push(new Promise((resolve, reject) => {
+				let queryData = {
+					setValues: {
+						'Title': 'Reserved',
+						'Description': 'This event has been reserved following a timeslot request',
+						'CWID': overrideRequestToGrant.fromCWID
+					},
+					where: {
+						EventID: eventDetail.id,
+						RoomName: eventDetail.room,
+						LocationName: eventDetail.location
+					},
+					groups: []
+				};
+				let queryDataString = JSON.stringify(queryData);
+				request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body) {
+						console.log('successfully reserved');
+						resolve();
 					} else
-						alert('failed deleting override request. Handle properly!');
-					// TODO: handle this failed error properly
+						reject();
 				});
-			} else
-				alert('failed while granting override request. Handle properly!');
+			}));
+		});
+
+		Promise.all(promises).then(() => {
+			let path: string = overrideRequestToGrant.event.id + '/' + overrideRequestToGrant.event.location +
+				'/' + overrideRequestToGrant.event.room;
+			request.delete('/api/overriderequests/' + path).end((err: {}, delRes: any) => {
+				if (delRes && delRes.body) {
+					this.sendOverrideGrantMessageToRequestor(overrideRequestToGrant, reply);
+					if (overrideRequestToGrant.adminRequested)
+						this.sendOverrideGrantMessageToOwner(overrideRequestToGrant, reply);
+					let overrideRequests = this.state.overrideRequests.slice(0);
+					overrideRequests.splice(index, 1);
+
+					if (Number(this.state.notifications.length + overrideRequests.length) <= 0)
+						this.setState({ overrideRequests: overrideRequests, open: false });
+					else
+						this.setState({ overrideRequests: overrideRequests });
+				} else
+					alert('failed deleting override request. Handle properly!');
+				// TODO: handle this failed error properly
+			});
+		}).catch(() => {
+			alert('failed while granting override request. Handle properly!');
 			// TODO: handle this failed error properly
+		});
+	}
+
+	removeRecurrenceRelationForReservedEvent = (event: Event) => {
+		let queryDataString = JSON.stringify({
+			where: {
+				EventID: event.id,
+				LocationName: event.location,
+				RoomName: event.room
+			}
+		});
+
+		request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+			if (!(res && res.body))
+				alert('error removing recurrence relation from db');
+			// TODO: handle this properly
+		});
+	}
+
+	getMatchingRecurringEventsFromDB = (recurringID: string): Promise<{ id: number, location: string, room: string }[]> => {
+		return new Promise((resolve, reject) => {
+			let queryDataString = JSON.stringify({
+				where: {
+					RecurringID: recurringID
+				}
+			});
+
+			request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body) {
+					let matchingEventDetails: { id: number, location: string, room: string }[] = res.body.map((relation: any) => {
+						return {
+							id: relation.EventID,
+							location: relation.LocationName,
+							room: relation.RoomName
+						};
+					});
+					resolve(matchingEventDetails);
+				} else
+					reject();
+			});
 		});
 	}
 
@@ -554,7 +643,6 @@ export class NotificationDropdown extends React.Component<Props, State> {
 
 			request.delete('/api/overriderequests/' + path).end((error: {}, res: any) => {
 				if (res && res.body) {
-					// TODO: send notification
 					this.sendAdminOverrideDenyMessage(overrideRequestToDeny, reply);
 					let overrideRequests = this.state.overrideRequests.slice(0);
 					overrideRequests.splice(index, 1);

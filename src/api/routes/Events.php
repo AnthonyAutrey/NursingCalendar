@@ -66,7 +66,7 @@ $app->get('/eventswithrelations', function (Request $request, Response $response
 	$queryString = DBUtil::buildSelectQuery(
 		'Events left outer join (select EventID as EventGroupID, LocationName as EventGroupLocationName, RoomName as EventGroupRoomName, GroupName from eventgrouprelation NATURAL join groups) groupJoin '.
 		'on groupJoin.EventGroupID = Events.EventID and EventGroupLocationName = LocationName and EventGroupRoomName = RoomName '.
-		'left outer join (SELECT EventID as OverrideID from overrideRequests) overrideJoin on EventID = OverrideID '.
+		'left outer join (SELECT EventID as OverrideID, RecurringEventRequest from overrideRequests) overrideJoin on EventID = OverrideID '.
 		'NATURAL join (select CWID, FirstName, LastName from Users) userJoin',
 		'*',
 		$queryData['where']
@@ -90,6 +90,11 @@ $app->get('/eventswithrelations', function (Request $request, Response $response
 			else
 				$pendingOverride = true;
 
+			if(is_null($joinedEvent->RecurringEventRequest))
+				$recurringOverrideRequest = null;
+			else
+				$recurringOverrideRequest = $joinedEvent->RecurringEventRequest;
+
 			$eventMap[
 				$joinedEvent->EventID.
 				$joinedEvent->LocationName.
@@ -105,7 +110,8 @@ $app->get('/eventswithrelations', function (Request $request, Response $response
 				'CWID' => $joinedEvent->CWID,
 				'Groups' => $groups,
 				'OwnerName' => $joinedEvent->FirstName.' '.$joinedEvent->LastName,
-				'PendingOverride' => $pendingOverride
+				'PendingOverride' => $pendingOverride,
+				'RecurringOverrideRequest' => $recurringOverrideRequest
 			];
 		} else {
 			array_push($eventMap[
