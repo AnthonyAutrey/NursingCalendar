@@ -43,7 +43,7 @@ $app->put('/recurringeventrelations', function (Request $request, Response $resp
 // Read //
 $app->get('/recurringeventrelations', function (Request $request, Response $response, array $args) {
 	$queryData = getSelectQueryData($request);
-	$queryString = DBUtil::buildSelectQuery('recurringeventrelation', $queryData['fields'],  $queryData['where']);
+	$queryString = DBUtil::buildSelectQuery('RecurringEventRelation', $queryData['fields'],  $queryData['where']);
 	$relations = DBUtil::runQuery($queryString);
 	$response->getBody()->write($relations);
 	$response = $response->withHeader('Content-type', 'application/json');
@@ -52,10 +52,24 @@ $app->get('/recurringeventrelations', function (Request $request, Response $resp
 
 // Delete //
 $app->delete('/recurringeventrelations', function (Request $request, Response $response, array $args) {
-	$queryData = getDeleteQueryData($request);
-	$deleteUserGroupsQuery = DBUtil::buildDeleteQuery('recurringeventrelation', $queryData['where']);
-	$results = DBUtil::runCommand($deleteUserGroupsQuery);
+	$results = [];
+	$queryDataArray = getDeleteQueryData($request);
+
+	if (array_key_exists("where", $queryDataArray))
+		$queryDataArray = [$queryDataArray];
+
+	foreach ($queryDataArray as $queryData) {
+		// return with 'bad request' response if request isn't correct
+		if (!isset($queryData['where'])) {
+			return $response->withStatus(400);
+		}
+
+		$deleteQuery = DBUtil::buildDeleteQuery('RecurringEventRelation', $queryData['where']);
+		array_push($results, DBUtil::runCommand($deleteQuery));
+	}
+	
 	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
-	return $response;	
+	return $response;
+
 })->add($requireInstructorOrAdmin);

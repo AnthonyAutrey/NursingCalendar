@@ -314,6 +314,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				recurringInfo: recurringInfo,
 				color: color
 			});
+			//TODO: remove console.log
+			console.log('placeholder.end');
+			console.log(placeholder.end);
 			events.delete(Number.MAX_SAFE_INTEGER);
 		}
 
@@ -327,8 +330,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		if (conflictingEvents.length > 0) {
 			let confirmMessage = 'Some recurring events couldn\'t be added due to conflicts with the following events: ';
 			conflictingEvents.forEach(event => {
-				confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).toLocaleString() +
-					'\n      end: ' + moment(event.end).toLocaleString();
+				confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).utc().toLocaleString().slice(0, 24) +
+					'\n      end: ' + moment(event.end).utc().toLocaleString().slice(0, 24);
 			});
 			if (!confirm(confirmMessage + '\n\nDo you want to continue?'))
 				return;
@@ -396,18 +399,19 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		let recurringEvents: Event[] = [];
 		let beginDate = moment(beginDateString).utc(true);
 		let endDate = moment(endDateString).utc(true);
-		let iterateDate = beginDate.clone().add(1, 'days');
+		let iterateBeginDate = beginDate.clone().add(1, 'days');
+		let iterateEndDate = endDate.clone().add(1, 'days');
 		let repeatEndDate = recurringInfo.endDate.clone().add(1, 'days');
 
-		while (iterateDate.isBefore(repeatEndDate)) {
-			let start = iterateDate.clone().set({ hour: beginDate.hour(), minute: beginDate.minute() }).toISOString();
-			let end = iterateDate.clone().set({ hour: endDate.hour(), minute: endDate.minute() }).toISOString();
+		while (iterateBeginDate.isBefore(repeatEndDate)) {
+			let start = iterateBeginDate.clone().set({ hour: beginDate.hour(), minute: beginDate.minute() }).toISOString();
+			let end = iterateEndDate.clone().set({ hour: endDate.hour(), minute: endDate.minute() }).toISOString();
 
 			if (this.createEventModal && (
 				(recurringInfo.type === 'monthly' &&
-					RecurringEvents.getWeekDayCount(iterateDate) + RecurringEvents.getDayOfWeekChar(iterateDate) === recurringInfo.monthlyDay) ||
+					RecurringEvents.getWeekDayCount(iterateBeginDate) + RecurringEvents.getDayOfWeekChar(iterateBeginDate) === recurringInfo.monthlyDay) ||
 				(recurringInfo.type === 'weekly' && recurringInfo.weeklyDays &&
-					recurringInfo.weeklyDays.includes(RecurringEvents.getDayOfWeekChar(iterateDate))) ||
+					recurringInfo.weeklyDays.includes(RecurringEvents.getDayOfWeekChar(iterateBeginDate))) ||
 				recurringInfo.type === 'daily'))
 				recurringEvents.push({
 					id: -1,
@@ -425,7 +429,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					color: ColorGenerator.getColor(groups[0])
 				});
 
-			iterateDate.add(1, 'days');
+			iterateBeginDate.add(1, 'days');
+			iterateEndDate.add(1, 'days');
 		}
 
 		return recurringEvents;
@@ -531,9 +536,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		});
 
 		let recurringEventsToAdd = this.getStateEventsAsArray().filter(event => {
-			// let matchingRecurringRelation = recurringRelations.find(relation => {
-			// 	return Number(relation.eventID) === Number(event.id) && event.recurringInfo !== undefined && relation.uuid === event.recurringInfo.id;
-			// });
 			return event.recurringInfo && !recurringRelationValues.has(event.id + event.recurringInfo.id);
 		});
 
@@ -544,7 +546,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					EventID: event.id,
 					LocationName: event.location,
 					RoomName: event.room,
-					RecurringType: event.recurringInfo.type
+					RecurringType: event.recurringInfo.type,
+					StartDate: event.recurringInfo.startDate.toISOString(),
+					EndDate: event.recurringInfo.endDate.toISOString()
 				};
 
 				if (event.recurringInfo.monthlyDay)
@@ -599,8 +603,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			});
 
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 20);
-				queryData.splice(0, 20);
+				let queryDataPart = queryData.slice(0, 15);
+				queryData.splice(0, 15);
 
 				let queryDataString = JSON.stringify(queryDataPart);
 				request.put('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
@@ -635,6 +639,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			while (queryData.length > 0) {
 				let queryDataPart = queryData.slice(0, 20);
 				queryData.splice(0, 20);
+
+				console.log('Deleting recurring relations');
+				console.log(queryDataPart);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
@@ -782,7 +789,11 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 						let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
 						console.log('Got recurring Event Relations!!!!!');
 						console.log(recRes.body);
+<<<<<<< HEAD
 						this.setState({ events: events, loading: false });
+=======
+						this.setState({ events: eventsWithRecurringInfo, loading: false });
+>>>>>>> parse-recurrence
 					}
 				});
 			}
@@ -793,16 +804,22 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	applyRecurringInfoToEvents = (events: Map<number, Event>, recurringBody: any[]): Map<number, Event> => {
 
-		// recurringBody.forEach(dbRecurringInfo => {
-		// 	let recurringInfo: RecurringEventInfo = {
-		// 		id: dbRecurringInfo.RecurringID;
-		// 		type: 'daily' | 'weekly' | 'monthly';
-		// 		monthlyDay: string | undefined;
-		// 		weeklyDays: string | undefined;
-		// 		startDate: Moment;
-		// 		endDate: Moment;
-		// 	};
-		// });
+		recurringBody.forEach(dbRecurringInfo => {
+			let recurringInfo: RecurringEventInfo = {
+				id: dbRecurringInfo.RecurringID,
+				type: dbRecurringInfo.RecurringType,
+				monthlyDay: dbRecurringInfo.MonthlyWeekday || undefined,
+				weeklyDays: dbRecurringInfo.WeeklyDays || undefined,
+				startDate: moment(dbRecurringInfo.StartDate),
+				endDate: moment(dbRecurringInfo.EndDate)
+			};
+
+			let event = events.get(Number(dbRecurringInfo.EventID));
+			if (event) {
+				event.recurringInfo = recurringInfo;
+				events.set(event.id, event);
+			}
+		});
 
 		return events;
 	}
