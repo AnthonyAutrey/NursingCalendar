@@ -75,6 +75,28 @@ export class Scheduler extends React.Component<Props, State> {
 		if (!this.state.initialized)
 			return null;
 
+		if (this.state.rooms.length < 1)
+			return (
+				<div>
+					<div className="col-lg-10 offset-lg-1">
+						<hr />
+						<div className="w-100 px-5">
+							<div className="card-body d-flex justify-content-center align-items-center">
+								<span className="oi oi-calendar" style={{ top: 1, fontSize: '5em' }} />
+								<h1 className="ml-5">
+									{
+										this.props.role === 'administrator' ?
+											'Add a room in the administration page to schedule events.' :
+											'See an admin to add a room to the system in order to schedule events.'
+									}
+								</h1>
+							</div>
+						</div>
+						<hr />
+					</div>
+				</div>
+			);
+
 		let bottomSpacerStyle: CSSProperties = {
 			height: this.bottomSpacerHeight
 		};

@@ -14,6 +14,10 @@ $app->put('/logs', function (Request $request, Response $response, array $args) 
 		$queryDataArray = [$queryDataArray];
 
 	foreach ($queryDataArray as $queryData) {
+		if (!isset($queryData['insertValues']) || 
+		!isset($queryData['insertValues']['LogID'])) {
+			return $response->withStatus(400);
+		}
 		$queryString = DBUtil::buildInsertQuery('logs', $queryData['insertValues']);
 		array_push($results, DBUtil::runCommand($queryString));
 	}

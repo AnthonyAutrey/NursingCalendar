@@ -14,11 +14,14 @@ $app->put('/locations', function (Request $request, Response $response, array $a
 		$queryDataArray = [$queryDataArray];
 
 	foreach ($queryDataArray as $queryData) {
-		$queryData = getInsertQueryData($request);
+		if (!isset($queryData['insertValues']) || 
+		!isset($queryData['insertValues']['LocationName'])) {
+			return $response->withStatus(400);
+		}
 		$queryString = DBUtil::buildInsertQuery('locations', $queryData['insertValues']);
-		$results[$queryData['insertValues']] = DBUtil::runCommand($queryString);
+		array_push($results, DBUtil::runCommand($queryString));
 	}
-	$response->getBody()->write($results);
+	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 })->add($requireAdmin);

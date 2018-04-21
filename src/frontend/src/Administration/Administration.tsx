@@ -4,6 +4,9 @@ import { Archive } from './Archive';
 import { ManageUsers } from './ManageUsers';
 import { ManageGroups } from './ManageGroups';
 import { LogViewer } from './LogViewer';
+import { ManageRooms } from './ManageRooms';
+import { ManageResources } from './ManageResources';
+import { ManageLocations } from './ManageLocations';
 
 interface Props {
 	handleShowAlert: Function;
@@ -14,6 +17,9 @@ interface State {
 	showPublishPeriod: boolean;
 	showArchive: boolean;
 	showManageInstructors: boolean;
+	showManageRooms: boolean;
+	showManageResources: boolean;
+	showManageLocations: boolean;
 	showManageGroups: boolean;
 	showLogViewer: boolean;
 }
@@ -25,6 +31,9 @@ export class Administration extends React.Component<Props, State> {
 			showPublishPeriod: false,
 			showArchive: false,
 			showManageInstructors: false,
+			showManageRooms: false,
+			showManageResources: false,
+			showManageLocations: false,
 			showManageGroups: false,
 			showLogViewer: false
 		};
@@ -45,9 +54,24 @@ export class Administration extends React.Component<Props, State> {
 				<div className={this.state.showManageInstructors ? '' : 'd-none'}>
 					<ManageUsers handleShowAlert={this.props.handleShowAlert} userRole="instructor" />
 				</div>
-				<button className="btn btn-primary btn-block mb-2" >
+				<button onClick={() => this.setState({ showManageRooms: !this.state.showManageRooms })} className="btn btn-primary btn-block mb-2" >
 					Manage Rooms
 				</button>
+				<div className={this.state.showManageRooms ? '' : 'd-none'}>
+					<ManageRooms handleShowAlert={this.props.handleShowAlert}/>
+				</div>
+				<button onClick={() => this.setState({ showManageResources: !this.state.showManageResources })} className="btn btn-primary btn-block mb-2" >
+					Manage Resources
+				</button>
+				<div className={this.state.showManageResources ? '' : 'd-none'}>
+					<ManageResources handleShowAlert={this.props.handleShowAlert}/>
+				</div>
+				<button onClick={() => this.setState({ showManageLocations: !this.state.showManageLocations })} className="btn btn-primary btn-block mb-2" >
+					Manage Locations
+				</button>
+				<div className={this.state.showManageLocations ? '' : 'd-none'}>
+					<ManageLocations handleShowAlert={this.props.handleShowAlert}/>
+				</div>
 				<button onClick={() => this.setState({ showManageGroups: !this.state.showManageGroups })} className="btn btn-primary btn-block mb-2" >
 					Manage Groups
 				</button>

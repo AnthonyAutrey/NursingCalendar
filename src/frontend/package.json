@@ -11,7 +11,7 @@
 	"dependencies": {
 		"classnames": "^2.2.5",
 		"fullcalendar-reactwrapper": "^1.0.7",
-		"moment": "^2.20.1",
+		"moment": "^2.22.1",
 		"react": "^16.2.0",
 		"react-dom": "^16.2.0",
 		"react-router-dom": "^4.2.2",

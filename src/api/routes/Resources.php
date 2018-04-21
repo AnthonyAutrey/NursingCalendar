@@ -14,11 +14,14 @@ $app->put('/resources', function (Request $request, Response $response, array $a
 		$queryDataArray = [$queryDataArray];
 
 	foreach ($queryDataArray as $queryData) {
-		$queryData = getInsertQueryData($request);
+		if (!isset($queryData['insertValues']) || 
+		!isset($queryData['insertValues']['ResourceName'])) {
+			return $response->withStatus(400);
+		}
 		$queryString = DBUtil::buildInsertQuery('resources', $queryData['insertValues']);
-		$results[$queryData['insertValues']] = DBUtil::runCommand($queryString);
+		array_push($results, DBUtil::runCommand($queryString));		
 	}
-	$response->getBody()->write($results);
+	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 })->add($requireAdmin);
@@ -50,7 +53,7 @@ $app->post('/resources', function (Request $request, Response $response, array $
 			return $response->withStatus(400);
 		}
 	
-		$queryString = DBUtil::buildUpdateQuery('resources NATURAL JOIN roomResourceRelation', $queryData['setValues'], $queryData['where']);	
+		$queryString = DBUtil::buildUpdateQuery('resources', $queryData['setValues'], $queryData['where']);	
 		array_push($results, DBUtil::runCommand($queryString));
 	}
 
@@ -62,7 +65,7 @@ $app->post('/resources', function (Request $request, Response $response, array $
 // Delete //
 $app->delete('/resources', function (Request $request, Response $response, array $args) {
 	$queryData = getDeleteQueryData($request);
-	$deleteQuery = DBUtil::buildDeleteQuery('resources NATURAL JOIN	roomResourceRelation', $queryData['where']);
+	$deleteQuery = DBUtil::buildDeleteQuery('resources', $queryData['where']);
 	$results = DBUtil::runCommand($deleteQuery);
 	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
