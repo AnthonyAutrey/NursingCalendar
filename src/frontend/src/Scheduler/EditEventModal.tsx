@@ -220,7 +220,8 @@ export class EditEventModal extends React.Component<Props, State> {
 
 	// Title and Description ///////////////////////////////////////////////////////////////////////////////////////////////
 	private handleTitleChange = (event: any) => {
-		this.setState({ title: event.target.value });
+		if (event.target.value.length <= 60)
+			this.setState({ title: event.target.value });
 	}
 
 	private handleDescriptionChange = (event: any) => {

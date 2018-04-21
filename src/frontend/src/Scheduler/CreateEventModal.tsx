@@ -190,7 +190,8 @@ export class CreateEventModal extends React.Component<Props, State> {
 	}
 
 	handleTitleChange = (event: any) => {
-		this.setState({ title: event.target.value });
+		if (event.target.value.length <= 60)
+			this.setState({ title: event.target.value });
 	}
 
 	handleDescriptionChange = (event: any) => {
