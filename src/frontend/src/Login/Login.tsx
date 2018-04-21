@@ -56,7 +56,7 @@ export class Login extends React.Component<Props, State> {
 								<div className="row">
 									<button tabIndex={3} type="submit" className="btn btn-primary btn-block mx-2 mt-2">
 										Submit
-									<span className="ml-2 oi oi-account-login" style={{ top: 1 }} />
+										<span className="ml-2 oi oi-account-login" style={{ top: 1 }} />
 									</button>
 								</div>
 							</form>
@@ -85,8 +85,8 @@ export class Login extends React.Component<Props, State> {
 		let queryDataString = JSON.stringify(queryData);
 
 		request.post('/api/login').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (res && res.body && res.body.authenticated)
-				this.props.handleLogin();
+			if (res && res.body && res.body.authenticated && res.body.cwid && res.body.role && res.body.firstName && res.body.lastName)
+				this.props.handleLogin(res.body.cwid, res.body.role, res.body.firstName, res.body.lastName);
 			else
 				this.setState({ failedAuthentication: true });
 		});

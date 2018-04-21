@@ -69,16 +69,14 @@ class App extends React.Component<{}, State> {
 		});
 	}
 
-	handleLogin = () => {
-		this.getSession();
-		this.forceUpdate();
+	handleLogin = (cwid: number, role: string, firstName: string, lastName: string) => {
+		this.setState({ sessionRetreived: true, cwid: cwid, role: role, name: firstName + ' ' + lastName });
 	}
 
 	handleLogout = () => {
 		request.get('/api/logout').end((error: {}, res: any) => {
-			this.setState({ cwid: undefined, role: undefined }, () => {
-				return <Redirect to="/" />;
-			});
+			if (res.body)
+				this.setState({ cwid: undefined, role: undefined, sessionRetreived: false });
 		});
 	}
 
