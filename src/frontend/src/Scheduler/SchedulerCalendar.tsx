@@ -781,7 +781,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					if (recRes && recRes.body) {
 						let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
 						console.log('Got recurring Event Relations!!!!!');
-						console.log(res.body);
+						console.log(recRes.body);
 						this.setState({ events: events, loading: false });
 					}
 				});
