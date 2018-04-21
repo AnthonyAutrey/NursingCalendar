@@ -92,10 +92,12 @@ export class ViewEventModal extends React.Component<Props, State> {
 								<br />
 								{this.state.event.ownerName}
 							</div>
-							<div className="form-group text-left">
+							<div className=" text-left">
 								<label className="font-weight-bold">Description:</label>
 								<br />
-								{descriptionString}
+								<p style={{ wordWrap: 'break-word' }}>
+									{descriptionString}
+								</p>
 							</div>
 							{!this.props.hideGroups && (
 								<div className="form-group text-left">
