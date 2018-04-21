@@ -945,6 +945,18 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			event1.title === event2.title);
 	}
 
+	eventsAreEqualExcludingOverride(event1?: Event, event2?: Event): boolean {
+		return (event1 !== undefined && event2 !== undefined &&
+			event1.cwid === event2.cwid &&
+			event1.description === event2.description &&
+			event1.end === event2.end &&
+			event1.groups.join() === event2.groups.join() &&
+			event1.id === event2.id &&
+			event1.ownerName === event2.ownerName &&
+			event1.start === event2.start &&
+			event1.title === event2.title);
+	}
+
 	// Event Persistence /////////////////////////////////////////////////////////////////////////////////////////////////
 	persistStateToDB(): void {
 		this.props.handleToolbarText('Submitting data, please wait.', 'info');
@@ -1079,7 +1091,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		this.state.events.forEach(event => {
 			if (eventIDsInDB.includes(event.id) &&
 				Number(event.cwid) !== Number(this.props.cwid) &&
-				!this.eventsAreEqual(this.eventCache.get(event.id), event))
+				!this.eventsAreEqualExcludingOverride(this.eventCache.get(event.id), event))
 				unownedEvents.push(event);
 		});
 
