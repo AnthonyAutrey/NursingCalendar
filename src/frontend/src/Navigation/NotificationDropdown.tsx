@@ -458,7 +458,8 @@ export class NotificationDropdown extends React.Component<Props, State> {
 				EventID: overrideRequestToGrant.event.id,
 				RoomName: overrideRequestToGrant.event.room,
 				LocationName: overrideRequestToGrant.event.location
-			}
+			},
+			groups: []
 		};
 		let queryDataString = JSON.stringify(queryData);
 		request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {

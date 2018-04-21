@@ -98,7 +98,7 @@ function getUpdateQueryData(Request $request) : array {
 		if (isset($queryData->where))
 			$where = $queryData->where;
 		if (isset($queryData->groups))
-			$groups = json_decode($qd->groups);
+			$groups = $queryData->groups;
 	
 		return sanitize(['setValues'=>$setValues, 'where'=>$where, 'groups'=>$groups]);
 	}
