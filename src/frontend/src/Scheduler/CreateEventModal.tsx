@@ -253,6 +253,11 @@ export class CreateEventModal extends React.Component<Props, State> {
 	}
 
 	repeatEndDateIsValid = (): boolean => {
+		if (!moment(this.state.repeatEndDate).isValid()) {
+			alert('The selected \'Repeat Until\' date is invalid.');
+			return false;
+		}
+
 		if (this.state.repeatType === 'monthly') {
 			let firstMonthlyRepeatDate = this.getFirstMonthlyRepeatDate();
 			if (!firstMonthlyRepeatDate &&
@@ -262,13 +267,12 @@ export class CreateEventModal extends React.Component<Props, State> {
 		}
 
 		let repeatEndDate = moment(this.state.repeatEndDate);
-		if (this.state.repeatType === 'daily' || this.state.repeatType === 'weekly') {
+		if (this.state.repeatType === 'daily' || this.state.repeatType === 'weekly')
 			if ((this.state.eventStart.format('YYYY-MM-DD') === repeatEndDate.format('YYYY-MM-DD') ||
 				repeatEndDate.isBefore(this.state.eventStart)) &&
 				!confirm('The \'Repeat Until\' date occurs before the event\'s next repeat date.' +
 					' This means that the event will not repeat. Do you want to continue?'))
 				return false;
-		}
 
 		return true;
 	}

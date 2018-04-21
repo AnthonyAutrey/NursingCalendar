@@ -110,10 +110,24 @@ function getDeleteQueryData(Request $request) : array {
 
 	if(count($request->getHeader('queryData')) > 0 and (!is_null($request->getHeader('queryData')[0])))
 		$queryData = json_decode($request->getHeader('queryData')[0]);
-	if (isset($queryData->where))
-		$where = $queryData->where;
 
-	return sanitize(['where'=>$where]);
+	if (is_array($queryData)) {
+		$queryDataArray = [];		
+		foreach ($queryData as $qd) {
+			if (isset($qd->where))
+				array_push($queryDataArray, ['where'=>$qd->where]);
+			else
+				array_push($queryDataArray, ['where'=>null]);
+		}
+
+		return sanitize($queryDataArray);
+	}
+	else {
+		if (isset($queryData->where))
+			$where = $queryData->where;
+
+		return sanitize(['where'=>$where]);
+	}
 }
 
 // Event Groups //
