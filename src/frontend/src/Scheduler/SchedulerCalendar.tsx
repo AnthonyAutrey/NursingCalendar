@@ -255,15 +255,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					eventLongPressDelay={0}
 					selectLongPressDelay={300}
 					select={this.handleCalendarSelect}
-				// selectAllow={(selectInfo: any) => {
-				// 	if (selectInfo.end.isAfter(this.state.publishPeriodStart) && selectInfo.start.isBefore(this.state.publishPeriodEnd)) {
-				// 		console.log('NO');
-				// 		return false;
-				// 	} else {
-				// 		// console.log('YES');
-				// 		return true;
-				// 	}
-				// }}
 				/>
 			</div>
 		);
@@ -344,26 +335,26 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		if (recurringInfo && placeholder)
 			recurringEvents = this.getRecurringEvents(title, description, groups, placeholder.start, placeholder.end, recurringInfo);
 
-		if (recurringInfo && this.checkIfRecurringEventsFallInPublishPeriod(recurringEvents) && this.props.role !== 'administrator') {
-			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
-			this.closeEventCreationModal();
-			return;
-		}
+		// if (recurringInfo && this.checkIfRecurringEventsFallInPublishPeriod(recurringEvents) && this.props.role !== 'administrator') {
+		// 	this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+		// 	this.closeEventCreationModal();
+		// 	return;
+		// }
 
-		let filteredEventsAndConflicts = this.getFilteredEventsAndConflicts(recurringEvents);
-		let conflictingEvents = filteredEventsAndConflicts.conflictingEvents;
-		let filteredRecurringEvents = filteredEventsAndConflicts.filteredEvents;
-		if (conflictingEvents.length > 0) {
-			let confirmMessage = 'Some recurring events couldn\'t be added due to conflicts with the following events: ';
-			conflictingEvents.forEach(event => {
-				confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).utc().toLocaleString().slice(0, 24) +
-					'\n      end: ' + moment(event.end).utc().toLocaleString().slice(0, 24);
-			});
-			if (!confirm(confirmMessage + '\n\nDo you want to continue?'))
-				return;
-		}
+		// let filteredEventsAndConflicts = this.getFilteredEventsAndConflicts(recurringEvents);
+		// let conflictingEvents = filteredEventsAndConflicts.conflictingEvents;
+		// let filteredRecurringEvents = filteredEventsAndConflicts.filteredEvents;
+		// if (conflictingEvents.length > 0) {
+		// 	let confirmMessage = 'Some recurring events couldn\'t be added due to conflicts with the following events: ';
+		// 	conflictingEvents.forEach(event => {
+		// 		confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).utc().toLocaleString().slice(0, 24) +
+		// 			'\n      end: ' + moment(event.end).utc().toLocaleString().slice(0, 24);
+		// 	});
+		// 	if (!confirm(confirmMessage + '\n\nDo you want to continue?'))
+		// 		return;
+		// }
 
-		filteredRecurringEvents.forEach(event => {
+		recurringEvents.forEach(event => {
 			index++;
 			event.id = index;
 			events.set(index, event);
@@ -389,13 +380,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let publishPeriodStart = this.state.publishPeriodStart;
 			let publishPeriodEnd = this.state.publishPeriodEnd;
-
-			console.log('start');
-			console.log(eventStart.toISOString());
-			console.log(publishPeriodStart.toISOString());
-			console.log('end');
-			console.log(eventEnd.toISOString());
-			console.log(publishPeriodEnd.toISOString());
 
 			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd))
 				eventInPublishPeriod = true;
@@ -438,7 +422,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			});
 
 			iterateDate.add(1, 'days');
-			// recurringIndex++;
 		}
 
 		return recurringEvents;
@@ -537,8 +520,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			request.get('/api/recurringeventrelations').set('queryData', queryData).end((error: {}, res: any) => {
 				if (res && res.body)
 					resolved(this.parseRecurringRelations(res.body));
-				else
+				else {
+					console.log('getRecurringRelationsForRoomFromDB failed');
 					reject();
+				}
 			});
 		});
 	}
@@ -570,10 +555,12 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				Promise.all(promises).then(() => {
 					resolved();
 				}).catch(() => {
+					console.log('persistRecurringEvents failed top catch');
 					reject();
 				});
 
 			}).catch(() => {
+				console.log('persistRecurringEvents failed bottom catch');
 				reject();
 			});
 		});
@@ -654,15 +641,17 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			});
 
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 15);
-				queryData.splice(0, 15);
+				let queryDataPart = queryData.slice(0, 10);
+				queryData.splice(0, 10);
 
 				let queryDataString = JSON.stringify(queryDataPart);
 				request.put('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
 					if (res && res.body)
 						resolved();
-					else
+					else {
+						console.log('Couldn\t add recurring relations to db');
 						reject();
+					}
 				});
 			}
 		});
@@ -696,8 +685,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body)
 							resAPI();
-						else
+						else {
+							console.log('Couldn\t delete recurring relations from db');
 							rejAPI();
+						}
 					});
 				}));
 			}
@@ -1167,8 +1158,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (res && res.body)
 					resolved(this.getEventIdsFromResponseBody(res.body));
-				else
+				else {
+					console.log('getClientEventIDsThatAreAlreadyInDB failed');
 					reject();
+				}
 			});
 		});
 	}
@@ -1187,8 +1180,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 					if (res && res.body)
 						resolved(res.body.map((event: any) => { return Number(event.EventID); }));
-					else
+					else {
+						console.log('deleteDBEventsNotInClient failed');
 						reject();
+					}
 				});
 			}).then((allDBEventIDsForRoom: number[]) => {
 				let clientEventIDs: number[] = Array.from(this.state.events.keys()).map(id => { return Number(id); });
@@ -1221,12 +1216,17 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 						if (res && res.body) {
 							this.logEventDeletions(eventsIDsToDelete);
 							resolveOuter();
-						} else
+						} else {
+							console.log('deleteDBEventsNotInClient failed rejectouter');
 							rejectOuter();
+						}
 					});
 				} else
 					resolveOuter();
-			}).catch(() => rejectOuter());
+			}).catch(() => {
+				console.log('deleteDBEventsNotInClient failed rejectouter bottom catch');
+				rejectOuter();
+			});
 		});
 	}
 
@@ -1292,8 +1292,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body) {
 							resAPI();
-						} else
+						} else {
+							console.log('updateExistingEventsInDB failed rejapi');
 							rejAPI();
+						}
 					});
 				}));
 			}
@@ -1303,7 +1305,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				this.logEventUpdates(eventsToLog);
 
 				resolved();
-			}).catch(() => { reject(); });
+			}).catch(() => {
+				console.log('updateExistingEventsInDB failed bottom catch');
+				reject();
+			});
 		});
 	}
 
@@ -1362,8 +1367,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let promises = [];
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 17);
-				queryData.splice(0, 17);
+				let queryDataPart = queryData.slice(0, 10);
+				queryData.splice(0, 10);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
@@ -1371,6 +1376,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 						if (res && res.body)
 							resAPI();
 						else {
+							console.log('persistNewEventsToDB failed rejAPI');
+							console.log(error);
+							console.log(res);
+							console.log(queryDataPart);
 							rejAPI();
 						}
 					});
@@ -1381,7 +1390,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				let eventsToLog = this.exludeDuplicateRecurringEvents(eventsToCreate);
 				this.logEventCreations(eventsToLog);
 				resolved();
-			}).catch(() => { reject(); });
+			}).catch(() => {
+				console.log('persistNewEventsToDB failed bottom catch reject');
+				reject();
+			});
 		});
 	}
 
@@ -1536,8 +1548,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		});
 
 		while (queryData.length > 0) {
-			let queryDataPart = queryData.slice(0, 20);
-			queryData.splice(0, 20);
+			let queryDataPart = queryData.slice(0, 10);
+			queryData.splice(0, 10);
 
 			let queryDataString = JSON.stringify(queryDataPart);
 			request.put('/api/logs').set('queryData', queryDataString).end();
