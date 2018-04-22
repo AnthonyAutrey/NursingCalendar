@@ -98,18 +98,18 @@ export class NavigationBar extends React.Component<Props, {}> {
 					<a className="nav-link" href="/administration">
 						<span className=" oi oi-key" />
 						&nbsp;
-			Administration
-		</a>
+						Administration
+					</a>
 				</li>
 			);
 
 		navLinks.push(
 			<li key={uuid()} className="nav-item">
-				<a className="nav-link" href="/" onClick={this.props.handleLogout}>
+				<a className="nav-link" href="#" onClick={this.props.handleLogout}>
 					<span className=" oi oi-account-logout" />
 					&nbsp;
-			Logout
-		</a>
+					Logout
+				</a>
 			</li>
 		);
 

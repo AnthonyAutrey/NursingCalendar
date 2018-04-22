@@ -52,7 +52,8 @@ $app->post('/login', function (Request $request, Response $response, array $args
 $app->get('/logout', function (Request $request, Response $response, array $args) {
 	session_destroy();
 	
-	$response->getBody()->write("Successfully logged out.");
+	$response->getBody()->write(json_encode(['Logged out']));
+	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 });
 

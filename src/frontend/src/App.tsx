@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { Login } from './Login/Login';
 import { NavigationBar } from './Navigation/NavigationBar';
 import { Scheduler } from './Scheduler/Scheduler';
@@ -74,9 +74,12 @@ class App extends React.Component<{}, State> {
 	}
 
 	handleLogout = () => {
+		// this.setState({ sessionRetreived: false });
 		request.get('/api/logout').end((error: {}, res: any) => {
-			if (res.body)
-				this.setState({ cwid: undefined, role: undefined, sessionRetreived: false });
+			if (res && res.body)
+				location.reload();
+			else
+				this.handleShowAlert('error', 'Error logging out.');
 		});
 	}
 
