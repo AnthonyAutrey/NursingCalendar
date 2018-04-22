@@ -30,7 +30,6 @@ interface State {
 	selectedRoomIndex: number;
 	locations: string[];
 	resources: Resource[];
-	selectedResources: Resource[];
 	initialized: boolean;
 }
 // TODO: Finish adding functionality to this class
@@ -42,7 +41,6 @@ export class ManageRooms extends React.Component<Props, State> {
 			selectedRoomIndex: 0,
 			locations: [],
 			resources: [],
-			selectedResources: [],
 			initialized: false
 		};
 	}
@@ -111,88 +109,93 @@ export class ManageRooms extends React.Component<Props, State> {
 				handleDeleteResource={this.handleDeleteResource}
 			/>);
 
-		return (
-			<div>
-				<hr />
-				<div className="w-100 px-5">
-					<div className="card-body">
-						<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Rooms</span>
-						<button className="btn btn-primary float-right" onClick={this.handleAddRoom}>
-							Add Room &nbsp;&nbsp;
+		if (this.state.rooms.length === 0)
+			return (
+				<div>asdf</div>
+			);
+		else
+			return (
+				<div>
+					<hr />
+					<div className="w-100 px-5">
+						<div className="card-body">
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Rooms</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddRoom}>
+								Add Room &nbsp;&nbsp;
 							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
-						</button>
-						<hr />
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Room:</label>
-							<div className="col-lg-8">
-								<select
-									className="form-control"
-									value={this.state.selectedRoomIndex}
-									onChange={(e) => this.handleSelectedRoomChange(e)}
-								>
-									{roomOptions}
-								</select>
-							</div>
-						</div>
-						<hr />
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Location:</label>
-							<div className="col-lg-8">
-								<select
-									className="form-control"
-									value={selectedLocation}
-									onChange={(e) => this.handleChangeLocation(e, this.state.selectedRoomIndex)}
-								>
-									{locationOptions}
-								</select>
-							</div>
-						</div>
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Room Name:</label>
-							<div className="col-lg-8">
-								<input
-									className="form-control form-control"
-									type="text"
-									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
-									onChange={(e) => this.handleChangeRoomName(e, this.state.selectedRoomIndex)}
-								/>
-							</div>
-						</div>
-						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Capacity:</label>
-							<div className="col-lg-8">
-								<input
-									className="form-control form-control"
-									type="number"
-									value={this.state.rooms[this.state.selectedRoomIndex].capacity}
-									onChange={(e) => this.handleChangeCapacity(e, this.state.selectedRoomIndex)}
-								/>
-							</div>
-						</div>
-						{roomResourceSelector}
-						<div className="form-group row">
-							<div className="col-lg-12">
-								<button type="button" className="btn btn-danger" onClick={this.needsWork}>
-									<span className=" oi oi-trash" />
-									<span>&nbsp;&nbsp;</span>
-									Delete Room
-						</button>
-							</div>
-						</div>
-						<hr />
-						<div className="row">
-							<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={this.needsWork}>
-								Submit Changes
 							</button>
-						</div>
-						<div className="form-group d-flex">
-							<div className="ml-auto" style={{ width: '120px !important' }} />
+							<hr />
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Room:</label>
+								<div className="col-lg-8">
+									<select
+										className="form-control"
+										value={this.state.selectedRoomIndex}
+										onChange={(e) => this.handleSelectedRoomChange(e)}
+									>
+										{roomOptions}
+									</select>
+								</div>
+							</div>
+							<hr />
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Location:</label>
+								<div className="col-lg-8">
+									<select
+										className="form-control"
+										value={selectedLocation}
+										onChange={(e) => this.handleChangeLocation(e, this.state.selectedRoomIndex)}
+									>
+										{locationOptions}
+									</select>
+								</div>
+							</div>
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Room Name:</label>
+								<div className="col-lg-8">
+									<input
+										className="form-control form-control"
+										type="text"
+										value={this.state.rooms[this.state.selectedRoomIndex].roomName}
+										onChange={(e) => this.handleChangeRoomName(e, this.state.selectedRoomIndex)}
+									/>
+								</div>
+							</div>
+							<div className="form-group row">
+								<label className="col-lg-4 col-form-label text-left">Capacity:</label>
+								<div className="col-lg-8">
+									<input
+										className="form-control form-control"
+										type="number"
+										value={this.state.rooms[this.state.selectedRoomIndex].capacity}
+										onChange={(e) => this.handleChangeCapacity(e, this.state.selectedRoomIndex)}
+									/>
+								</div>
+							</div>
+							{roomResourceSelector}
+							<div className="form-group row">
+								<div className="col-lg-12">
+									<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteRoom(this.state.selectedRoomIndex)}>
+										<span className=" oi oi-trash" />
+										<span>&nbsp;&nbsp;</span>
+										Delete Room
+						</button>
+								</div>
+							</div>
+							<hr />
+							<div className="row">
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={this.handlePersistChanges}>
+									Submit Changes
+							</button>
+							</div>
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
 						</div>
 					</div>
+					<hr />
 				</div>
-				<hr />
-			</div>
-		);
+			);
 	}
 
 	needsWork = () => { return true; };
@@ -283,8 +286,7 @@ export class ManageRooms extends React.Component<Props, State> {
 				let initialResourceIsEnumerableCheckValue = parsedResources[0].isEnumerable;
 
 				this.setState({
-					resources: parsedResources,
-					selectedResources: []
+					resources: parsedResources
 				});
 			} else {
 				alert('Error getting resource data! Handle this properly!');
@@ -340,6 +342,16 @@ export class ManageRooms extends React.Component<Props, State> {
 		rooms.push(newRoom);
 
 		this.setState({ rooms: rooms, selectedRoomIndex: rooms.length - 1 });
+	}
+
+	handleDeleteRoom = (index: number) => {
+		if (!confirm('Are you sure you want to delete this room?'))
+			return;
+
+		let rooms = this.state.rooms.slice(0);
+		rooms.splice(index, 1);
+
+		this.setState({ rooms: rooms, selectedRoomIndex: 0 });
 	}
 
 	handleSelectedRoomChange = (event: any) => {
@@ -499,23 +511,23 @@ export class ManageRooms extends React.Component<Props, State> {
 
 		getRoomsFromDB.then((dbRooms) => {
 			console.log(dbRooms);
-			// let locationNamesToDelete = this.getLocationNamesNotInState(dbLocations);
+			let roomNamesToDelete = this.getRoomsNotInState(dbRooms);
 			// let locationsToCreateInDB = this.getLocationsNotInDB(dbLocations);
 			// let locationsNotCreatedInDB = this.filterIdenticalLocations(this.state.locations, locationsToCreateInDB);
 			// let locationsToUpdateInDB = this.filterIdenticalLocations(locationsNotCreatedInDB, dbLocations);
 
-			// console.log('To Delete: ');
-			// console.log(locationNamesToDelete);
+			console.log('To Delete: ');
+			console.log(roomNamesToDelete);
 			// console.log('To Create: ');
 			// console.log(locationsToCreateInDB);
 			// console.log('To Update: ');
 			// console.log(locationsToUpdateInDB);
 
-			// let persistToDBPromises = [
-			// 	this.deleteLocationsFromDB(locationNamesToDelete),
-			// 	this.createLocationsInDB(locationsToCreateInDB),
-			// 	this.updateLocationsInDB(locationsToUpdateInDB)
-			// ];
+			let persistToDBPromises = [
+				this.deleteRoomsFromDB(roomNamesToDelete),
+				// 	this.createLocationsInDB(locationsToCreateInDB),
+				// 	this.updateLocationsInDB(locationsToUpdateInDB)
+			];
 
 			// Promise.all(persistToDBPromises).then(() => {
 			// 	this.props.handleShowAlert('success', 'Successfully submitted data!');
@@ -526,6 +538,22 @@ export class ManageRooms extends React.Component<Props, State> {
 		}).catch(() => {
 			this.props.handleShowAlert('error', 'Error submitting data.');
 		});
+	}
+
+	getRoomsNotInState = (rooms: Room[]): { locationName: string, roomName: string }[] => {
+		let roomsNotInState = rooms.filter(room => {
+			return !this.state.rooms.map(stateRoom => {
+				return stateRoom.dbLocationName + stateRoom.dbRoomName;
+			}).includes(room.dbLocationName + room.dbRoomName);
+		});
+
+		return roomsNotInState.map(room => {
+			return { locationName: room.locationName, roomName: room.roomName };
+		});
+	}
+	// PICKUP HERE
+	deleteRoomsFromDB = (rooms: { locationName: string, roomName: string }[]) => {
+		return true;
 	}
 
 	// TODO: Finish adding necessary checks
