@@ -29,6 +29,8 @@ interface State {
 	showCreateModal: boolean;
 	groupOptionsFromAPI: string[];
 	loading: boolean;
+	publishPeriodStart: Moment;
+	publishPeriodEnd: Moment;
 }
 
 export interface Event {
@@ -72,7 +74,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			events: new Map<number, Event>(),
 			showCreateModal: false,
 			groupOptionsFromAPI: [],
-			loading: false
+			loading: false,
+			publishPeriodStart: moment('8-05-1985'),
+			publishPeriodEnd: moment('8-05-2985'),
 		};
 	}
 
@@ -250,6 +254,12 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					eventLongPressDelay={0}
 					selectLongPressDelay={300}
 					select={this.handleCalendarSelect}
+				// selectAllow={(selectInfo: any) => {
+				// 	if (selectInfo.end.isAfter(this.state.publishPeriodStart) && selectInfo.start.isBefore(this.state.publishPeriodEnd)) {
+				// 		return false;
+				// 	} else
+				// 		return true;
+				// }}
 				/>
 			</div>
 		);
@@ -260,6 +270,13 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		// Don't allow events to be created in month view
 		if (this.currentView === 'month')
 			return;
+
+		// Check if publish period
+		if (end.isAfter(this.state.publishPeriodStart) && start.isBefore(this.state.publishPeriodEnd)) {
+			alert('This is the publish period!!');
+			this.forceUpdate();
+			return;
+		}
 
 		// Don't allow events to be less than x minutes
 		if (moment.duration(end.diff(start)).asMinutes() < 30)
@@ -748,6 +765,21 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	handleEventClick = (event: any, jsEvent: any, view: any) => {
 		let events = this.cloneStateEvents();
 		let clickedEvent: Event | undefined = events.get(event.id);
+		if (clickedEvent) {
+			let eventStartString = clickedEvent.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = clickedEvent.end;
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+			if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd)) {
+				alert('This is the publish period!!');
+				return;
+			}
+		}
+
 		if (clickedEvent && Number(clickedEvent.cwid) === Number(this.props.cwid) || clickedEvent && this.props.role === 'administrator')
 			this.openEditEventModal(clickedEvent.id, clickedEvent.title, clickedEvent.description, clickedEvent.groups, clickedEvent.recurringInfo);
 		else if (clickedEvent)
@@ -781,25 +813,56 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	// Client Events //////////////////////////////////////////////////////////////////////////////////////////////
 	public getStateFromDB(room: string = this.props.room, location: string = this.props.location): void {
 		this.setState({ loading: true });
-		let queryData: {} = {
-			where: {
-				RoomName: room,
-				LocationName: location
-			}
-		};
-		let queryDataString = JSON.stringify(queryData);
-		request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (res && res.body) {
-				let events = this.parseDBEvents(res.body);
+		Promise.all([this.getEventsFromDB(), this.getPublishDatesFromAPI()]).then((data) => {
+			let events: Map<number, Event> = data[0];
+			let publishdates: { start: string, end: string } = data[1];
+			console.log(moment(publishdates.start));
+			console.log(moment(publishdates.end));
+			this.setState({
+				events: events,
+				publishPeriodStart: moment(publishdates.start).utc(true),
+				publishPeriodEnd: moment(publishdates.end).utc(true).add(1, 'days'),
+				loading: false
+			});
+		}).catch(() => {
+			// TODO: handle error
+		});
+	}
 
-				request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
-					if (recRes && recRes.body) {
-						let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
-						this.eventCache = eventsWithRecurringInfo;
-						this.setState({ events: eventsWithRecurringInfo, loading: false });
-					}
-				});
-			}
+	getEventsFromDB = (room: string = this.props.room, location: string = this.props.location): Promise<Map<number, Event>> => {
+		return new Promise((resolved, reject) => {
+			let queryData: {} = {
+				where: {
+					RoomName: room,
+					LocationName: location
+				}
+			};
+			let queryDataString = JSON.stringify(queryData);
+			request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body) {
+					let events = this.parseDBEvents(res.body);
+					request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
+						if (recRes && recRes.body) {
+							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
+							this.eventCache = eventsWithRecurringInfo;
+							resolved(eventsWithRecurringInfo);
+						} else
+							reject();
+					});
+				} else
+					reject();
+			});
+		});
+	}
+
+	getPublishDatesFromAPI = (): Promise<{ start: string, end: string }> => {
+		return new Promise((resolved, reject) => {
+			request.get('/api/publishdates').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolved({ start: res.body.Start, end: res.body.End });
+				else
+					reject();
+			});
 		});
 	}
 
