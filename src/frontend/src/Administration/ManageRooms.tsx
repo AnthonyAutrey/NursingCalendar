@@ -32,6 +32,7 @@ interface State {
 	resources: Resource[];
 	selectedResources: Resource[];
 	initialized: boolean;
+	focusOnResourceCount: boolean;
 }
 // TODO: Finish adding functionality to this class
 export class ManageRooms extends React.Component<Props, State> {
@@ -43,7 +44,8 @@ export class ManageRooms extends React.Component<Props, State> {
 			locations: [],
 			resources: [],
 			selectedResources: [],
-			initialized: false
+			initialized: false,
+			focusOnResourceCount: false
 		};
 	}
 
@@ -109,6 +111,9 @@ export class ManageRooms extends React.Component<Props, State> {
 				handleChangeResourceCount={this.handleChangeResourceCount}
 				handleAddResource={this.needsWork}
 				handleDeleteResource={this.needsWork}
+				handleCountFocusIn={this.handleResourceCountFocusIn}
+				handleCountFocusOut={this.handleResourceCountFocusOut}
+				focusOnResourceCount={this.state.focusOnResourceCount}
 			/>);
 
 		return (
@@ -411,11 +416,14 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	handleChangeResourceCount = (event: any, index: number) => {
-		let resourceCount = event.target.value;
-		let room = this.state.rooms[this.state.selectedRoomIndex];
+		let resourceCount = Number(event.target.value);
+
+		let room: Room = this.state.rooms[this.state.selectedRoomIndex];
 		let selectedResource = room.resources[index];
 		let rooms = this.state.rooms;
-		if (room && selectedResource && resourceCount) {
+
+		if (room && selectedResource && resourceCount && Number.isInteger(resourceCount)) {
+
 			room.resources[index].count = resourceCount;
 			rooms[this.state.selectedRoomIndex] = room;
 			this.setState({ rooms: rooms });
@@ -485,6 +493,16 @@ export class ManageRooms extends React.Component<Props, State> {
 
 	getSelectedRoom = () => {
 		return this.state.rooms.slice(0)[this.state.selectedRoomIndex];
+	}
+
+	// Resource Count Focus ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	handleResourceCountFocusIn = () => {
+		if (!this.state.focusOnResourceCount)
+			this.setState({ focusOnResourceCount: true });
+	}
+	handleResourceCountFocusOut = () => {
+		if (this.state.focusOnResourceCount)
+			this.setState({ focusOnResourceCount: false });
 	}
 }
 

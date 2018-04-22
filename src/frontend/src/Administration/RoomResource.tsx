@@ -9,6 +9,9 @@ interface Props {
 	handleChangeResource: Function;
 	handleChangeResourceCount: Function;
 	handleDelete: Function;
+	handleCountFocusIn: Function;
+	handleCountFocusOut: Function;
+	focusOnResourceCount: boolean;
 }
 
 export class RoomResource extends React.Component<Props, {}> {
@@ -52,14 +55,23 @@ export class RoomResource extends React.Component<Props, {}> {
 						<input
 							className="form-control ml-2"
 							style={{ width: 90 }}
-							type="number"
+							type="text"
 							value={this.props.selectedResource.count}
+							autoFocus={this.props.focusOnResourceCount}
+							onBlur={() => this.props.handleCountFocusOut()}
+							onFocus={(e) => { this.props.handleCountFocusIn(); this.moveCaretAtEnd(e); }}
 							onChange={(event) => this.props.handleChangeResourceCount(event, this.props.index)}
 						/>
 						<button className="btn btn-danger ml-2" onClick={() => this.props.handleDelete(this.props.index)}>&#10006;</button>
 					</div>
 				</div>
 			);
+	}
+
+	moveCaretAtEnd(e: any) {
+		let tempValue = e.target.value;
+		e.target.value = '';
+		e.target.value = tempValue;
 	}
 }
 
