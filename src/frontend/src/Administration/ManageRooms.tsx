@@ -1,11 +1,9 @@
 import * as React from 'react';
-// import { Room } from '../Scheduler/Scheduler';
+import { RoomResourceSelector } from './RoomResourceSelector';
 const uuid = require('uuid/v4');
 const request = require('superagent');
 
-// TODO: Discuss the implementation of this interface with Tony.
-// Do we want to add extra fields to the Room interface from Scheduler or keep this new one?
-interface Room {
+export interface Room {
 	locationName: string;
 	dbLocationName: string;
 	selectedLocationIndex: number;
@@ -13,11 +11,11 @@ interface Room {
 	dbRoomName: string;
 	capacity: number;
 	dbCapacity: number;
-	resources: { name: string, count: number }[];
-	dbResources: { name: string, count: number }[];
+	resources: Resource[];
+	dbResources: Resource[];
 }
 
-interface Resource {
+export interface Resource {
 	name: string;
 	isEnumerable: boolean;
 	count?: number;
@@ -50,22 +48,69 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	componentWillMount() {
-		this.getRoomsFromDB();
-		this.getLocationsFromDB();
-		this.getResourcesFromDB();
+		let getLocationsFromDB: Promise<string[]> = new Promise((resolve, reject) => {
+			request.get('/api/locations').end((error: {}, res: any) => {
+				if (res && res.body) {
+					resolve(this.parseLocations(res.body));
+				} else {
+					reject();
+				}
+			});
+		});
+		let getResourcesFromDB: Promise<Resource[]> = new Promise((resolve, reject) => {
+			request.get('/api/resources').end((error: {}, res: any) => {
+				if (res && res.body) {
+					resolve(this.parseResources(res.body));
+				} else {
+					reject();
+				}
+			});
+		});
+		let getRoomsFromDB: Promise<Room[]> = new Promise((resolve, reject) => {
+			request.get('/api/rooms').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve(this.parseRooms(res.body));
+				else
+					reject();
+			});
+		});
+
+		getLocationsFromDB.then((parsedDBLocations) => {
+			this.setState({ locations: parsedDBLocations });
+			getResourcesFromDB.then((parsedDBResources) => {
+				this.setState({ resources: parsedDBResources });
+				getRoomsFromDB.then((parsedDBRooms) => {
+					this.setState({ rooms: parsedDBRooms });
+					this.mapRoomLocationRelations();
+				});
+			});
+		});
 	}
 
 	render() {
 		if (!this.state.initialized)
 			return null;
 
-		console.log(this.state);
 		let roomOptions = this.state.rooms.map((room, index) => {
 			return (<option key={uuid()} value={index}>{room.locationName + ' - ' + room.roomName}</option>);
 		});
+
 		let locationOptions = this.state.locations.map((location, index) => {
 			return (<option key={uuid()} value={index}>{location}</option>);
 		});
+
+		let selectedLocation = this.state.rooms[this.state.selectedRoomIndex].selectedLocationIndex;
+
+		console.log(this.state.rooms[this.state.selectedRoomIndex]);
+		let roomResourceSelector = (
+			<RoomResourceSelector
+				room={this.state.rooms[this.state.selectedRoomIndex]}
+				allPossibleResources={this.state.resources}
+				handleChangeResources={this.needsWork}
+				handleChangeResourceCount={this.needsWork}
+				handleAddResource={this.needsWork}
+				handleDeleteResource={this.needsWork}
+			/>);
 
 		return (
 			<div>
@@ -94,6 +139,18 @@ export class ManageRooms extends React.Component<Props, State> {
 						</div>
 						<hr />
 						<div className="form-group row">
+							<label className="col-lg-4 col-form-label text-left">Location:</label>
+							<div className="col-lg-8">
+								<select
+									className="form-control"
+									value={selectedLocation}
+									onChange={(e) => this.handleChangeLocation(e, this.state.selectedRoomIndex)}
+								>
+									{locationOptions}
+								</select>
+							</div>
+						</div>
+						<div className="form-group row">
 							<label className="col-lg-4 col-form-label text-left">Room Name:</label>
 							<div className="col-lg-8">
 								<input
@@ -105,28 +162,17 @@ export class ManageRooms extends React.Component<Props, State> {
 							</div>
 						</div>
 						<div className="form-group row">
-							<label className="col-lg-4 col-form-label text-left">Location:</label>
-							<div className="col-lg-8">
-								<select
-									className="form-control"
-									value={this.state.locations[this.state.rooms[this.state.selectedRoomIndex].selectedLocationIndex]}
-									onChange={(e) => this.handleChangeLocation(e, this.state.selectedRoomIndex)}
-								>
-									{locationOptions}
-								</select>
-							</div>
-						</div>
-						<div className="form-group row">
 							<label className="col-lg-4 col-form-label text-left">Capacity:</label>
 							<div className="col-lg-8">
 								<input
 									className="form-control form-control"
-									type="text"
+									type="number"
 									value={this.state.rooms[this.state.selectedRoomIndex].capacity}
-									onChange={this.needsWork}
+									onChange={(e) => this.handleChangeCapacity(e, this.state.selectedRoomIndex)}
 								/>
 							</div>
 						</div>
+						{roomResourceSelector}
 						<div className="form-group row">
 							<div className="col-lg-12">
 								<button type="button" className="btn btn-danger" onClick={this.needsWork}>
@@ -155,7 +201,6 @@ export class ManageRooms extends React.Component<Props, State> {
 	needsWork = () => { return true; };
 
 	getRoomsFromDB = () => {
-
 		request.get('/api/rooms').end((error: {}, res: any) => {
 			if (res && res.body) {
 				let parsedRooms = this.parseRooms(res.body);
@@ -178,13 +223,17 @@ export class ManageRooms extends React.Component<Props, State> {
 			let dbRoomName: string = dbRoom.RoomName;
 
 			if (!roomlocationSet.has(dbRoomName + dbLocationName)) {
-				let resources: { name: string, count: number }[] = [];
-				resources.push({ name: dbRoom.ResourceName, count: dbRoom.Count });
-				let locationIndex = this.getSelectedLocationIndex(dbRoom.LocationName);
+				let resources: Resource[] = [];
+				if (dbRoom.ResourceName)
+					if (dbRoom.Count)
+						resources.push({ name: dbRoom.ResourceName, isEnumerable: dbRoom.IsEnumerable, count: dbRoom.Count });
+					else
+						resources.push({ name: dbRoom.ResourceName, isEnumerable: dbRoom.IsEnumerable });
+
 				let room: Room = {
 					locationName: dbRoom.LocationName,
 					dbLocationName: dbRoom.LocationName,
-					selectedLocationIndex: locationIndex,
+					selectedLocationIndex: -1,
 					roomName: dbRoom.RoomName,
 					dbRoomName: dbRoom.RoomName,
 					capacity: dbRoom.Capacity,
@@ -195,7 +244,7 @@ export class ManageRooms extends React.Component<Props, State> {
 				parsedRooms.push(room);
 				parsedRoomIndex++;
 			} else
-				parsedRooms[parsedRoomIndex].resources.push({ name: dbRoom.ResourceName, count: dbRoom.Count });
+				parsedRooms[parsedRoomIndex].resources.push({ name: dbRoom.ResourceName, isEnumerable: dbRoom.IsEnumerable });
 
 			roomlocationSet.add(dbRoomName + dbLocationName);
 		});
@@ -209,7 +258,7 @@ export class ManageRooms extends React.Component<Props, State> {
 				let parsedLocations = this.parseLocations(res.body);
 				if (parsedLocations.length === 0)
 					return;
-				this.setState({ locations: parsedLocations});
+				this.setState({ locations: parsedLocations });
 			} else {
 				alert('Error getting location data! Handle this properly!');
 				this.props.handleShowAlert('error', 'Error getting class data.');
@@ -229,7 +278,6 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	getResourcesFromDB = () => {
-
 		request.get('/api/resources').end((error: {}, res: any) => {
 			if (res && res.body) {
 				let parsedResources = this.parseResources(res.body);
@@ -253,8 +301,7 @@ export class ManageRooms extends React.Component<Props, State> {
 		dbResources.forEach(dbResource => {
 			let resource: Resource = {
 				name: dbResource.ResourceName,
-				isEnumerable: (dbResource.IsEnumerable > 0),
-				count: 0
+				isEnumerable: (dbResource.IsEnumerable > 0)
 			};
 			resources.push(resource);
 		});
@@ -333,7 +380,17 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	handleChangeLocation = (event: any, index: number) => {
+		let rooms = this.state.rooms.slice(0);
+		rooms[index].selectedLocationIndex = event.target.value;
+		rooms[index].locationName = this.state.locations[event.target.value];
+		this.setState({ rooms: rooms });
+	}
+
+	handleChangeCapacity = (event: any, index: number) => {
 		console.log(event.target.value);
+		let rooms = this.state.rooms.slice(0);
+		rooms[index].capacity = event.target.value;
+		this.setState({ rooms: rooms });
 	}
 
 	getSelectedRoomIndex = (locationName: String, roomName: String): number => {
@@ -353,6 +410,14 @@ export class ManageRooms extends React.Component<Props, State> {
 				index = locationIndex;
 		});
 		return index;
+	}
+
+	mapRoomLocationRelations = () => {
+		let rooms = this.state.rooms.slice(0);
+		rooms.forEach((room, index) => {
+			room.selectedLocationIndex = this.getSelectedLocationIndex(room.locationName);
+		});
+		this.setState({ rooms: rooms, initialized: true });
 	}
 
 	// TODO: Finish adding necessary checks
