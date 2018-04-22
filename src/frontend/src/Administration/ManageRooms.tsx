@@ -107,8 +107,8 @@ export class ManageRooms extends React.Component<Props, State> {
 				allPossibleResources={this.state.resources}
 				handleChangeResource={this.handleChangeResource}
 				handleChangeResourceCount={this.handleChangeResourceCount}
-				handleAddResource={this.needsWork}
-				handleDeleteResource={this.needsWork}
+				handleAddResource={this.handleAddResource}
+				handleDeleteResource={this.handleDeleteResource}
 			/>);
 
 		return (
@@ -422,6 +422,41 @@ export class ManageRooms extends React.Component<Props, State> {
 		}
 	}
 
+	handleAddResource = () => {
+		let room = this.state.rooms[this.state.selectedRoomIndex];
+		let rooms = this.state.rooms;
+		let unselectedResources = this.state.resources.filter(resource => {
+			let selected = true;
+			if (room)
+				room.resources.forEach(selectedResource => {
+					if (selectedResource.name === resource.name)
+						selected = false;
+				});
+
+			return selected;
+		});
+		console.log(unselectedResources);
+
+		if (room && unselectedResources.length > 0) {
+			let resource = unselectedResources[0];
+			if (resource.isEnumerable)
+				resource.count = 0;
+			room.resources.push(resource);
+			rooms[this.state.selectedRoomIndex] = room;
+			this.setState({ rooms: rooms });
+		}
+	}
+
+	handleDeleteResource = (index: number) => {
+		let room = this.state.rooms[this.state.selectedRoomIndex];
+		let rooms = this.state.rooms;
+		if (room) {
+			room.resources.splice(index, 1);
+			rooms[this.state.selectedRoomIndex] = room;
+			this.setState({ rooms: rooms });
+		}
+	}
+
 	getSelectedRoomIndex = (locationName: String, roomName: String): number => {
 		let index = -1;
 		this.state.rooms.forEach((room, roomIndex) => {
@@ -447,6 +482,50 @@ export class ManageRooms extends React.Component<Props, State> {
 			room.selectedLocationIndex = this.getSelectedLocationIndex(room.locationName);
 		});
 		this.setState({ rooms: rooms, initialized: true });
+	}
+
+	handlePersistChanges = () => {
+		if (!this.doValidityChecks())
+			return;
+
+		let getRoomsFromDB: Promise<Room[]> = new Promise((resolve, reject) => {
+			request.get('/api/rooms').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve(this.parseRooms(res.body));
+				else
+					reject();
+			});
+		});
+
+		getRoomsFromDB.then((dbRooms) => {
+			console.log(dbRooms);
+			// let locationNamesToDelete = this.getLocationNamesNotInState(dbLocations);
+			// let locationsToCreateInDB = this.getLocationsNotInDB(dbLocations);
+			// let locationsNotCreatedInDB = this.filterIdenticalLocations(this.state.locations, locationsToCreateInDB);
+			// let locationsToUpdateInDB = this.filterIdenticalLocations(locationsNotCreatedInDB, dbLocations);
+
+			// console.log('To Delete: ');
+			// console.log(locationNamesToDelete);
+			// console.log('To Create: ');
+			// console.log(locationsToCreateInDB);
+			// console.log('To Update: ');
+			// console.log(locationsToUpdateInDB);
+
+			// let persistToDBPromises = [
+			// 	this.deleteLocationsFromDB(locationNamesToDelete),
+			// 	this.createLocationsInDB(locationsToCreateInDB),
+			// 	this.updateLocationsInDB(locationsToUpdateInDB)
+			// ];
+
+			// Promise.all(persistToDBPromises).then(() => {
+			// 	this.props.handleShowAlert('success', 'Successfully submitted data!');
+			// 	this.resetDBNames();
+			// }).catch(() => {
+			// 	this.props.handleShowAlert('error', 'Error submitting data.');
+			// });
+		}).catch(() => {
+			this.props.handleShowAlert('error', 'Error submitting data.');
+		});
 	}
 
 	// TODO: Finish adding necessary checks
