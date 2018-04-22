@@ -101,13 +101,12 @@ export class ManageRooms extends React.Component<Props, State> {
 
 		let selectedLocation = this.state.rooms[this.state.selectedRoomIndex].selectedLocationIndex;
 
-		console.log(this.state.rooms[this.state.selectedRoomIndex]);
 		let roomResourceSelector = (
 			<RoomResourceSelector
 				room={this.state.rooms[this.state.selectedRoomIndex]}
 				allPossibleResources={this.state.resources}
-				handleChangeResources={this.needsWork}
-				handleChangeResourceCount={this.needsWork}
+				handleChangeResource={this.handleChangeResource}
+				handleChangeResourceCount={this.handleChangeResourceCount}
 				handleAddResource={this.needsWork}
 				handleDeleteResource={this.needsWork}
 			/>);
@@ -117,13 +116,11 @@ export class ManageRooms extends React.Component<Props, State> {
 				<hr />
 				<div className="w-100 px-5">
 					<div className="card-body">
-						<div className="row">
-							<h4 className="card-title">Manage Rooms</h4>
-							<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddRoom}>
-								Add Room &nbsp;&nbsp;
-									<span className="plusIcon oi oi-size-sm oi-plus" />
-							</button>
-						</div>
+						<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Rooms</span>
+						<button className="btn btn-primary float-right" onClick={this.handleAddRoom}>
+							Add Room &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
+						</button>
 						<hr />
 						<div className="form-group row">
 							<label className="col-lg-4 col-form-label text-left">Room:</label>
@@ -226,9 +223,9 @@ export class ManageRooms extends React.Component<Props, State> {
 				let resources: Resource[] = [];
 				if (dbRoom.ResourceName)
 					if (dbRoom.Count)
-						resources.push({ name: dbRoom.ResourceName, isEnumerable: dbRoom.IsEnumerable, count: dbRoom.Count });
+						resources.push({ name: dbRoom.ResourceName, isEnumerable: true, count: dbRoom.Count });
 					else
-						resources.push({ name: dbRoom.ResourceName, isEnumerable: dbRoom.IsEnumerable });
+						resources.push({ name: dbRoom.ResourceName, isEnumerable: false });
 
 				let room: Room = {
 					locationName: dbRoom.LocationName,
@@ -328,8 +325,8 @@ export class ManageRooms extends React.Component<Props, State> {
 
 		// TODO: Handle the location selection on this new room effectively.
 		let newRoom: Room = {
-			locationName: '',
-			dbLocationName: '',
+			locationName: this.state.locations[0],
+			dbLocationName: this.state.locations[0],
 			selectedLocationIndex: 0,
 			roomName: ('New Room ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
 			dbRoomName: ('New Room ' + ((newRoomCount === 0) ? '' : newRoomCount)).trim(),
@@ -387,10 +384,42 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	handleChangeCapacity = (event: any, index: number) => {
-		console.log(event.target.value);
 		let rooms = this.state.rooms.slice(0);
 		rooms[index].capacity = event.target.value;
 		this.setState({ rooms: rooms });
+	}
+
+	handleChangeResource = (event: any, index: number) => {
+		let resourceName = event.target.value;
+		let resourceIsEnumerable = false;
+		let count = -1;
+		let selectedResource = this.state.resources.find(resource => {
+			return resourceName === resource.name;
+		});
+
+		let room = this.state.rooms[this.state.selectedRoomIndex];
+		let rooms = this.state.rooms;
+		if (room && selectedResource) {
+			room.resources[index] = selectedResource;
+			if (selectedResource && selectedResource.isEnumerable) {
+				room.resources[index].count = 0;
+				room.resources[index].isEnumerable = true;
+			}
+			rooms[this.state.selectedRoomIndex] = room;
+			this.setState({ rooms: rooms });
+		}
+	}
+
+	handleChangeResourceCount = (event: any, index: number) => {
+		let resourceCount = event.target.value;
+		let room = this.state.rooms[this.state.selectedRoomIndex];
+		let selectedResource = room.resources[index];
+		let rooms = this.state.rooms;
+		if (room && selectedResource && resourceCount) {
+			room.resources[index].count = resourceCount;
+			rooms[this.state.selectedRoomIndex] = room;
+			this.setState({ rooms: rooms });
+		}
 	}
 
 	getSelectedRoomIndex = (locationName: String, roomName: String): number => {

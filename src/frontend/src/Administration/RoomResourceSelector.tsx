@@ -6,7 +6,7 @@ const uuid = require('uuid/v4');
 interface Props {
 	room: Room;
 	allPossibleResources: Resource[];
-	handleChangeResources: Function;
+	handleChangeResource: Function;
 	handleChangeResourceCount: Function;
 	handleAddResource: Function;
 	handleDeleteResource: Function;
@@ -29,11 +29,8 @@ export class RoomResourceSelector extends React.Component<Props, {}> {
 		});
 
 		let selectedResources: Resource[] = [];
-		console.log(this.props.room.resources);
 		let selectors = this.props.room.resources.map((resource, index) => {
-			let resourceOptions = unselectedResources.map(r => {
-				return r;
-			});
+			let resourceOptions = unselectedResources;
 			resourceOptions.unshift(resource);
 
 			selectedResources.push(resource);
@@ -47,13 +44,12 @@ export class RoomResourceSelector extends React.Component<Props, {}> {
 					index={index}
 					resources={resourceOptions}
 					selectedResource={resource}
-					handleChangeResource={this.props.handleChangeResources}
+					handleChangeResource={this.props.handleChangeResource}
 					handleChangeResourceCount={this.props.handleChangeResourceCount}
 					handleDelete={this.props.handleDeleteResource}
 				/>
 			);
 		});
-		console.log(selectors);
 
 		let addButton = null;
 		if (this.props.room.resources.length < this.props.allPossibleResources.length)
@@ -68,7 +64,7 @@ export class RoomResourceSelector extends React.Component<Props, {}> {
 			return (
 				<div>
 					<div className="form-group row">
-						<div className="col-lg-8">
+						<div className="col-lg-12">
 							{addButton}
 						</div>
 					</div>
@@ -79,7 +75,7 @@ export class RoomResourceSelector extends React.Component<Props, {}> {
 			<div>
 				<div className="form-group row">
 					<label className="col-lg-4 col-form-label text-left">Resources:</label>
-					<div className="col-lg-8">
+					<div className="col-lg-8 float-left">
 						{selectors}
 						{addButton}
 					</div>
