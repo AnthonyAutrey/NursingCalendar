@@ -262,39 +262,12 @@ export class EditEventModal extends React.Component<Props, State> {
 		if (recurringInfo && recurringInfo.type === 'daily')
 			detailString = 'Daily from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
 		else if (recurringInfo && recurringInfo.type === 'weekly')
-			detailString = 'Weekly on ' + this.getWeeklyCommaString() +
+			detailString = 'Weekly on ' + RecurringEvents.getWeeklyCommaString(recurringInfo) +
 				', from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
 		else if (recurringInfo && recurringInfo.type === 'monthly')
 			detailString = 'Monthly, ' + RecurringEvents.getMonthlyDayIndicatorString(recurringInfo.startDate) + '.';
 
 		return detailString;
-	}
-
-	getWeeklyCommaString = (): string => {
-		if (this.state.recurringInfo) {
-			let commaString = '';
-			let weekDays = this.state.recurringInfo.weeklyDays;
-			if (weekDays && weekDays.includes('m'))
-				commaString += 'Mon, ';
-			if (weekDays && weekDays.includes('t'))
-				commaString += 'Tues, ';
-			if (weekDays && weekDays.includes('w'))
-				commaString += 'Wed, ';
-			if (weekDays && weekDays.includes('r'))
-				commaString += 'Thurs, ';
-			if (weekDays && weekDays.includes('f'))
-				commaString += 'Fri, ';
-			if (weekDays && weekDays.includes('s'))
-				commaString += 'Sat, ';
-			if (weekDays && weekDays.includes('u'))
-				commaString += 'Sun, ';
-
-			if (commaString.substr(commaString.length - 2) === ', ')
-				commaString = commaString.substr(0, commaString.length - 2);
-
-			return commaString;
-		} else
-			return '';
 	}
 
 	// Save and Delete //////////////////////////////////////////////////////////////////////////////////////////////

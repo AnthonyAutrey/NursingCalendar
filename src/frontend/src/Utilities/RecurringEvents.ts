@@ -66,4 +66,31 @@ export class RecurringEvents {
 
 		return 'every ' + countWordMap[weekDayCount] + ' ' + weekDayMap[dayOfWeekChar];
 	}
+
+	public static getWeeklyCommaString = (recurringInfo: RecurringEventInfo): string => {
+		if (recurringInfo) {
+			let commaString = '';
+			let weekDays = recurringInfo.weeklyDays;
+			if (weekDays && weekDays.includes('m'))
+				commaString += 'Mon, ';
+			if (weekDays && weekDays.includes('t'))
+				commaString += 'Tues, ';
+			if (weekDays && weekDays.includes('w'))
+				commaString += 'Wed, ';
+			if (weekDays && weekDays.includes('r'))
+				commaString += 'Thurs, ';
+			if (weekDays && weekDays.includes('f'))
+				commaString += 'Fri, ';
+			if (weekDays && weekDays.includes('s'))
+				commaString += 'Sat, ';
+			if (weekDays && weekDays.includes('u'))
+				commaString += 'Sun, ';
+
+			if (commaString.substr(commaString.length - 2) === ', ')
+				commaString = commaString.substr(0, commaString.length - 2);
+
+			return commaString;
+		} else
+			return '';
+	}
 }

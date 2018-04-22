@@ -48,7 +48,7 @@ $app->get('/recurringeventrelations', function (Request $request, Response $resp
 	$response->getBody()->write($relations);
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;	
-})->add($requireInstructorOrAdmin);
+})->add($requireAnyRole);
 
 // Delete //
 $app->delete('/recurringeventrelations', function (Request $request, Response $response, array $args) {

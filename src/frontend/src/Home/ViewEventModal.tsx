@@ -1,11 +1,15 @@
 import * as React from 'react';
 import { Event } from './ViewingCalendar';
 import { CSSProperties } from 'react';
+import { RecurringEventInfo, RecurringEvents } from '../Utilities/RecurringEvents';
 const request = require('superagent');
 const uuid = require('uuid/v4');
+import * as moment from 'moment';
+import { isString } from 'util';
 
 interface Props {
 	hideGroups?: boolean;
+	hideRecurrence?: boolean;
 }
 
 interface State {
@@ -29,6 +33,10 @@ export class ViewEventModal extends React.Component<Props, State> {
 	render() {
 		if (!this.state.show || !this.state.event)
 			return null;
+
+		let recurringDetailString = null;
+		if (this.state.event && this.state.event.recurringInfo)
+			recurringDetailString = this.getRecurringDetailString();
 
 		let backdropStyle: CSSProperties = {
 			zIndex: Number.MAX_SAFE_INTEGER,
@@ -99,6 +107,16 @@ export class ViewEventModal extends React.Component<Props, State> {
 									{descriptionString}
 								</p>
 							</div>
+							{
+								this.state.event.recurringInfo && !this.props.hideRecurrence &&
+								<div className=" text-left">
+									<label className="font-weight-bold">Recurrence:</label>
+									<br />
+									<p style={{ wordWrap: 'break-word' }}>
+										{recurringDetailString}
+									</p>
+								</div>
+							}
 							{!this.props.hideGroups && (
 								<div className="form-group text-left">
 									<label className="font-weight-bold">Groups:</label>
@@ -140,12 +158,20 @@ export class ViewEventModal extends React.Component<Props, State> {
 				year: 'numeric', month: 'short',
 				day: 'numeric', hour: 'numeric', minute: 'numeric'
 			};
-			let d = new Date(this.state.event.start);
-			let start = new Date(this.state.event.start + (60000 * d.getTimezoneOffset()));
+
+			let eventStart: any = this.state.event.start;
+			if (isString(this.state.event.start))
+				eventStart = moment(this.state.event.start);
+
+			let d = new Date(eventStart);
+			let start = new Date(eventStart + (60000 * d.getTimezoneOffset()));
 			let startString = start.toLocaleTimeString('en-us', options);
 
 			if (this.state.event.end) {
-				let end = new Date(this.state.event.end + (60000 * d.getTimezoneOffset()));
+				let eventEnd: any = this.state.event.end;
+				if (isString(this.state.event.end))
+					eventEnd = moment(this.state.event.end);
+				let end = new Date(eventEnd + (60000 * d.getTimezoneOffset()));
 				let endString = end.toLocaleTimeString('en-us', options);
 				return startString + ' - ' + endString;
 			}
@@ -153,6 +179,22 @@ export class ViewEventModal extends React.Component<Props, State> {
 			return startString;
 		} else
 			return '';
+	}
+
+	private getRecurringDetailString = (): string => {
+		let detailString = '';
+		if (this.state.event && this.state.event.recurringInfo) {
+			let recurringInfo = this.state.event.recurringInfo;
+			if (recurringInfo && recurringInfo.type === 'daily')
+				detailString = 'Daily from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
+			else if (recurringInfo && recurringInfo.type === 'weekly')
+				detailString = 'Weekly on ' + RecurringEvents.getWeeklyCommaString(recurringInfo) +
+					', from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
+			else if (recurringInfo && recurringInfo.type === 'monthly')
+				detailString = 'Monthly, ' + RecurringEvents.getMonthlyDayIndicatorString(recurringInfo.startDate) + '.';
+		}
+
+		return detailString;
 	}
 }
 

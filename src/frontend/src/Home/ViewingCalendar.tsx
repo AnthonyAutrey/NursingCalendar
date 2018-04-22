@@ -1,9 +1,11 @@
 import * as React from 'react';
 import { UnownedEventModal } from '../Scheduler/UnownedEventModal';
+import { RecurringEventInfo } from '../Utilities/RecurringEvents';
 import { ViewEventModal } from './ViewEventModal';
 import { Loading } from '../Generic/Loading';
 import { ColorGenerator } from '../Utilities/Colors';
 const request = require('superagent');
+import * as moment from 'moment';
 const FullCalendarReact = require('fullcalendar-reactwrapper');
 
 interface Props {
@@ -37,6 +39,7 @@ export interface Event {
 	location: string;
 	room: string;
 	groups: string[];
+	recurringInfo?: RecurringEventInfo;
 	color?: string;
 }
 
@@ -221,8 +224,15 @@ export class ViewingCalendar extends React.Component<Props, State> {
 			};
 			let eventQueryDataString = JSON.stringify(eventQueryData);
 			request.get('/api/eventswithrelations').set('queryData', eventQueryDataString).end((error: {}, res: any) => {
-				if (res && res.body)
-					this.setState({ events: this.parseDBEvents(res.body), loading: false });
+				if (res && res.body) {
+					request.get('/api/recurringeventrelations').end((recError: {}, recRes: any) => {
+						if (recRes && recRes.body) {
+							let events = this.parseDBEvents(res.body);
+							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
+							this.setState({ events: eventsWithRecurringInfo, loading: false });
+						}
+					});
+				}
 			});
 
 		}).catch(() => {
@@ -231,6 +241,30 @@ export class ViewingCalendar extends React.Component<Props, State> {
 		});
 
 		return groups;
+	}
+
+	applyRecurringInfoToEvents = (events: Event[], recurringBody: any[]): Event[] => {
+
+		let eventRecurringInfoMap = new Map<string, RecurringEventInfo>();
+		recurringBody.forEach(dbRecurringInfo => {
+			let recurringInfo: RecurringEventInfo = {
+				id: dbRecurringInfo.RecurringID,
+				type: dbRecurringInfo.RecurringType,
+				monthlyDay: dbRecurringInfo.MonthlyWeekday || undefined,
+				weeklyDays: dbRecurringInfo.WeeklyDays || undefined,
+				startDate: moment(dbRecurringInfo.StartDate),
+				endDate: moment(dbRecurringInfo.EndDate)
+			};
+
+			eventRecurringInfoMap.set(dbRecurringInfo.EventID + dbRecurringInfo.LocationName + dbRecurringInfo.RoomName, recurringInfo);
+		});
+
+		events.forEach(event => {
+			if (eventRecurringInfoMap.has(event.id + event.location + event.room))
+				event.recurringInfo = eventRecurringInfoMap.get(event.id + event.location + event.room);
+		});
+
+		return events;
 	}
 
 	parseDBEvents(body: any): Event[] {

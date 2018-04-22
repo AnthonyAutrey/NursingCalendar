@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Event } from './SchedulerCalendar';
 import { CSSProperties } from 'react';
+import { RecurringEventInfo, RecurringEvents } from '../Utilities/RecurringEvents';
 const request = require('superagent');
 const uuid = require('uuid/v4');
 
@@ -53,6 +54,10 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		let descriptionString = this.state.event.description;
 		if (this.state.event.description === '')
 			descriptionString = 'No description.';
+
+		let recurringDetailString = null;
+		if (this.state.event && this.state.event.recurringInfo)
+			recurringDetailString = this.getRecurringDetailString();
 
 		let groupString: string[] = this.state.event.groups.map(event => {
 			return event + ', ';
@@ -121,6 +126,16 @@ export class UnownedEventModal extends React.Component<Props, State> {
 									{descriptionString}
 								</p>
 							</div>
+							{
+								this.state.event.recurringInfo &&
+								<div className=" text-left">
+									<label className="font-weight-bold">Recurrence:</label>
+									<br />
+									<p style={{ wordWrap: 'break-word' }}>
+										{recurringDetailString}
+									</p>
+								</div>
+							}
 							<div className="form-group text-left">
 								<label className="font-weight-bold">Groups:</label>
 								<br />
@@ -204,6 +219,23 @@ export class UnownedEventModal extends React.Component<Props, State> {
 
 	private handleSetNotRecurring = () => {
 		this.setState({ requestForAllRecurring: false, showRecurrenceOptions: false, showRequestForm: true });
+	}
+
+	private getRecurringDetailString = (): string => {
+		let detailString = '';
+		if (this.state.event && this.state.event.recurringInfo) {
+			let recurringInfo = this.state.event.recurringInfo;
+			console.log(recurringInfo);
+			if (recurringInfo && recurringInfo.type === 'daily')
+				detailString = 'Daily from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
+			else if (recurringInfo && recurringInfo.type === 'weekly')
+				detailString = 'Weekly on ' + RecurringEvents.getWeeklyCommaString(recurringInfo) +
+					', from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
+			else if (recurringInfo && recurringInfo.type === 'monthly')
+				detailString = 'Monthly, ' + RecurringEvents.getMonthlyDayIndicatorString(recurringInfo.startDate) + '.';
+		}
+
+		return detailString;
 	}
 
 	// Request TimeSlot ////////////////////////////////////////////////////////////////////////////////////////////////////

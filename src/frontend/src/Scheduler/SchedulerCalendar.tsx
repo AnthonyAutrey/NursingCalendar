@@ -315,9 +315,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				recurringInfo: recurringInfo,
 				color: color
 			});
-			//TODO: remove console.log
-			console.log('placeholder.end');
-			console.log(placeholder.end);
+
 			events.delete(Number.MAX_SAFE_INTEGER);
 		}
 
@@ -505,12 +503,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		return new Promise((resolved, reject) => {
 			this.getRecurringRelationsForRoomFromDB().then(recurringRelations => {
 				let recurringRelationsToAdd = this.getRecurringRelationsToAddToDB(recurringRelations);
-				console.log('Recurring Relations to Add');
-				console.log(recurringRelationsToAdd);
-
 				let recurringRelationsToDelete = this.getRecurringRelationsToDeleteFromDB(recurringRelations);
-				console.log('Recurring Relations to Delete');
-				console.log(recurringRelationsToDelete);
 
 				let promises = [
 					this.addRecurringRelationsToDB(recurringRelationsToAdd),
@@ -640,9 +633,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			while (queryData.length > 0) {
 				let queryDataPart = queryData.slice(0, 20);
 				queryData.splice(0, 20);
-
-				console.log('Deleting recurring relations');
-				console.log(queryDataPart);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
@@ -778,7 +768,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		let events: Map<number, Event> = this.cloneStateEvents();
 		let eventWithRequest: Event | undefined = events.get(eventID);
 		if (eventWithRequest) {
-			events = this.addPendingOverrideToEntireRecurringEvent(eventWithRequest);
+			if (overrideRecurring)
+				events = this.addPendingOverrideToEntireRecurringEvent(eventWithRequest);
 			eventWithRequest.pendingOverride = true;
 			events.set(eventID, eventWithRequest);
 			this.setState({ events: events });
@@ -800,20 +791,16 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
 			if (res && res.body) {
 				let events = this.parseDBEvents(res.body);
-				this.eventCache = this.parseDBEvents(res.body);
 
 				request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
 					if (recRes && recRes.body) {
 						let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
-						console.log('Got recurring Event Relations!!!!!');
-						console.log(recRes.body);
+						this.eventCache = eventsWithRecurringInfo;
 						this.setState({ events: eventsWithRecurringInfo, loading: false });
 					}
 				});
 			}
 		});
-
-		// TODO: finish this
 	}
 
 	applyRecurringInfoToEvents = (events: Map<number, Event>, recurringBody: any[]): Map<number, Event> => {
@@ -1263,8 +1250,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
-					console.log(queryDataPart);
-					console.log('..............');
 					request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body)
 							resAPI();

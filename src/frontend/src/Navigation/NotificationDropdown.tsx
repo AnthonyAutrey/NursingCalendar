@@ -3,7 +3,10 @@ import { Notification } from './Notification';
 import { OverrideRequest } from './OverrideRequest';
 import { Event } from '../Home/ViewingCalendar';
 import { ViewEventModal } from '../Home/ViewEventModal';
+import { RecurringEventInfo, RecurringEvents } from '../Utilities/RecurringEvents';
 import { CSSProperties } from 'react';
+import { Loading } from '../Generic/Loading';
+import * as moment from 'moment';
 const uuid = require('uuid/v4');
 const request = require('superagent');
 
@@ -17,6 +20,7 @@ interface State {
 	notifications: NotificationData[];
 	overrideRequests: OverrideRequestData[];
 	loading: boolean;
+	overrideRequestLoading: boolean;
 }
 
 interface NotificationData {
@@ -57,6 +61,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 			open: false,
 			notifications: [],
 			overrideRequests: [],
+			overrideRequestLoading: false,
 			loading: true
 		};
 	}
@@ -84,15 +89,21 @@ export class NotificationDropdown extends React.Component<Props, State> {
 	}
 
 	render() {
-		if (this.state.loading)
+		if (this.state.loading || this.state.overrideRequestLoading)
 			return (
-				<ul className="nav nav-pills mt-2 mt-lg-0 ml-1" ref={container => { this.container = container; }}>
-					<li className="nav-item dropdown">
-						<a className="nav-link bg-secondary text-light"	>
-							Loading...
-						</a>
-					</li>
-				</ul>
+				<div>
+					{
+						this.state.overrideRequestLoading &&
+						<Loading />
+					}
+					<ul className="nav nav-pills mt-2 mt-lg-0 ml-1" ref={container => { this.container = container; }}>
+						<li className="nav-item dropdown">
+							<a className="nav-link bg-secondary text-light"	>
+								Loading...
+							</a>
+						</li>
+					</ul>
+				</div>
 			);
 
 		const styleLarge: CSSProperties = {
@@ -416,9 +427,6 @@ export class NotificationDropdown extends React.Component<Props, State> {
 	}
 
 	parseOverriderRequestsFromDB = (dbOverrideRequests: any): OverrideRequestData[] => {
-
-		console.log('dbOverrideRequests');
-		console.log(dbOverrideRequests);
 		let overrideRequests: OverrideRequestData[] = dbOverrideRequests.map((dbOverrideRequest: any) => {
 			let adminRequested = false;
 			if (Number(dbOverrideRequest.AdminRequested) === 1)
@@ -445,10 +453,19 @@ export class NotificationDropdown extends React.Component<Props, State> {
 				fromName: dbOverrideRequest.RequestorFirstName + ' ' + dbOverrideRequest.RequestorLastName
 			};
 
-			if (dbOverrideRequest.RecurringID)
-				overrideRequest.recurringID = dbOverrideRequest.RecurringID;
+			if (dbOverrideRequest.RecurringID) {
+				let recurringInfo: RecurringEventInfo = {
+					id: dbOverrideRequest.RecurringID,
+					type: dbOverrideRequest.RecurringType,
+					monthlyDay: dbOverrideRequest.MonthlyWeekday || undefined,
+					weeklyDays: dbOverrideRequest.WeeklyDays || undefined,
+					startDate: moment(dbOverrideRequest.StartDate),
+					endDate: moment(dbOverrideRequest.EndDate)
+				};
 
-			console.log(dbOverrideRequest);
+				overrideRequest.recurringID = dbOverrideRequest.RecurringID;
+				overrideRequest.event.recurringInfo = recurringInfo;
+			}
 
 			if (dbOverrideRequest.RecurringEventRequest && dbOverrideRequest.RecurringEventRequest === 1)
 				overrideRequest.recurringOverrideRequest = true;
@@ -485,33 +502,43 @@ export class NotificationDropdown extends React.Component<Props, State> {
 		reply: string,
 		index: number) => {
 
+		let queryData = eventDetails.map(eventDetail => {
+			return {
+				setValues: {
+					'Title': 'Reserved',
+					'Description': 'This event has been reserved following a timeslot request',
+					'CWID': overrideRequestToGrant.fromCWID
+				},
+				where: {
+					EventID: eventDetail.id,
+					RoomName: eventDetail.room,
+					LocationName: eventDetail.location
+				},
+				groups: []
+			};
+		});
+
 		let promises: Promise<void>[] = [];
-		eventDetails.forEach(eventDetail => {
+
+		while (queryData.length > 0) {
 			promises.push(new Promise((resolve, reject) => {
-				let queryData = {
-					setValues: {
-						'Title': 'Reserved',
-						'Description': 'This event has been reserved following a timeslot request',
-						'CWID': overrideRequestToGrant.fromCWID
-					},
-					where: {
-						EventID: eventDetail.id,
-						RoomName: eventDetail.room,
-						LocationName: eventDetail.location
-					},
-					groups: []
-				};
-				let queryDataString = JSON.stringify(queryData);
+				let queryDataPart = queryData.slice(0, 15);
+				queryData.splice(0, 15);
+
+				let queryDataString = JSON.stringify(queryDataPart);
 				request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 					if (res && res.body) {
-						console.log('successfully reserved');
 						resolve();
 					} else
 						reject();
 				});
 			}));
-		});
+		}
 
+		let overrideRequests = this.state.overrideRequests.slice(0);
+		overrideRequests.splice(index, 1);
+
+		this.setState({ overrideRequestLoading: true });
 		Promise.all(promises).then(() => {
 			let path: string = overrideRequestToGrant.event.id + '/' + overrideRequestToGrant.event.location +
 				'/' + overrideRequestToGrant.event.room;
@@ -520,13 +547,11 @@ export class NotificationDropdown extends React.Component<Props, State> {
 					this.sendOverrideGrantMessageToRequestor(overrideRequestToGrant, reply);
 					if (overrideRequestToGrant.adminRequested)
 						this.sendOverrideGrantMessageToOwner(overrideRequestToGrant, reply);
-					let overrideRequests = this.state.overrideRequests.slice(0);
-					overrideRequests.splice(index, 1);
 
 					if (Number(this.state.notifications.length + overrideRequests.length) <= 0)
-						this.setState({ overrideRequests: overrideRequests, open: false });
+						this.setState({ overrideRequests: overrideRequests, open: false, overrideRequestLoading: false });
 					else
-						this.setState({ overrideRequests: overrideRequests });
+						this.setState({ overrideRequests: overrideRequests, overrideRequestLoading: false });
 				} else
 					alert('failed deleting override request. Handle properly!');
 				// TODO: handle this failed error properly
