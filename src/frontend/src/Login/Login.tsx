@@ -26,7 +26,7 @@ export class Login extends React.Component<Props, State> {
 		return (
 			<div className="continer">
 				<div className="bg-light text-center mb-4 pb-4 pt-3 garamond ulm-red border-bottom">
-					<div className="d-flex justify-content-center align-items-center">
+					<div className="d-flex flex-wrap justify-content-center align-items-center">
 						<img src="../../ulm-academic-logo-circle.png" alt="logo" style={{ maxWidth: 110 }} />
 						<h5 className="display-4 ml-4">ULM Nursing Schedule</h5>
 					</div>

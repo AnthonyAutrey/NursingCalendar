@@ -22,6 +22,7 @@ interface Props {
 	handleToolbarMessage: Function;
 	handleToolbarText: Function;
 	handleToolbarReset: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -29,6 +30,8 @@ interface State {
 	showCreateModal: boolean;
 	groupOptionsFromAPI: string[];
 	loading: boolean;
+	publishPeriodStart: Moment;
+	publishPeriodEnd: Moment;
 }
 
 export interface Event {
@@ -72,7 +75,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			events: new Map<number, Event>(),
 			showCreateModal: false,
 			groupOptionsFromAPI: [],
-			loading: false
+			loading: false,
+			publishPeriodStart: moment('8-05-1985'),
+			publishPeriodEnd: moment('8-05-2585'),
 		};
 	}
 
@@ -245,11 +250,20 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					selectable={true}
 					selectOverlap={false}
 					selectHelper={true}
-					viewRender={(view: any) => this.cacheViewAndDate(view)}
+					viewRender={(view: any, element: any) => this.cacheViewAndDate(view, element)}
 					firstDay={1}
 					eventLongPressDelay={0}
 					selectLongPressDelay={300}
 					select={this.handleCalendarSelect}
+				// selectAllow={(selectInfo: any) => {
+				// 	if (selectInfo.end.isAfter(this.state.publishPeriodStart) && selectInfo.start.isBefore(this.state.publishPeriodEnd)) {
+				// 		console.log('NO');
+				// 		return false;
+				// 	} else {
+				// 		// console.log('YES');
+				// 		return true;
+				// 	}
+				// }}
 				/>
 			</div>
 		);
@@ -260,6 +274,13 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		// Don't allow events to be created in month view
 		if (this.currentView === 'month')
 			return;
+
+		// Check if publish period
+		if (end.isAfter(this.state.publishPeriodStart) && start.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+			this.forceUpdate();
+			return;
+		}
 
 		// Don't allow events to be less than x minutes
 		if (moment.duration(end.diff(start)).asMinutes() < 30)
@@ -323,6 +344,12 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		if (recurringInfo && placeholder)
 			recurringEvents = this.getRecurringEvents(title, description, groups, placeholder.start, placeholder.end, recurringInfo);
 
+		if (recurringInfo && this.checkIfRecurringEventsFallInPublishPeriod(recurringEvents) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+			this.closeEventCreationModal();
+			return;
+		}
+
 		let filteredEventsAndConflicts = this.getFilteredEventsAndConflicts(recurringEvents);
 		let conflictingEvents = filteredEventsAndConflicts.conflictingEvents;
 		let filteredRecurringEvents = filteredEventsAndConflicts.filteredEvents;
@@ -346,6 +373,36 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	// Recurring Events //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	checkIfRecurringEventsFallInPublishPeriod = (recurringEvents: Event[]) => {
+		let eventInPublishPeriod = false;
+		recurringEvents.forEach(event => {
+
+			let eventStartString = event.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = event.end || '';
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+
+			let publishPeriodStart = this.state.publishPeriodStart;
+			let publishPeriodEnd = this.state.publishPeriodEnd;
+
+			console.log('start');
+			console.log(eventStart.toISOString());
+			console.log(publishPeriodStart.toISOString());
+			console.log('end');
+			console.log(eventEnd.toISOString());
+			console.log(publishPeriodEnd.toISOString());
+
+			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd))
+				eventInPublishPeriod = true;
+		});
+
+		return eventInPublishPeriod;
+	}
 
 	getDailyRecurringEvents(
 		title: string,
@@ -748,6 +805,21 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	handleEventClick = (event: any, jsEvent: any, view: any) => {
 		let events = this.cloneStateEvents();
 		let clickedEvent: Event | undefined = events.get(event.id);
+		if (clickedEvent) {
+			let eventStartString = clickedEvent.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = clickedEvent.end;
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+			if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+				this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+				return;
+			}
+		}
+
 		if (clickedEvent && Number(clickedEvent.cwid) === Number(this.props.cwid) || clickedEvent && this.props.role === 'administrator')
 			this.openEditEventModal(clickedEvent.id, clickedEvent.title, clickedEvent.description, clickedEvent.groups, clickedEvent.recurringInfo);
 		else if (clickedEvent)
@@ -781,25 +853,57 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	// Client Events //////////////////////////////////////////////////////////////////////////////////////////////
 	public getStateFromDB(room: string = this.props.room, location: string = this.props.location): void {
 		this.setState({ loading: true });
-		let queryData: {} = {
-			where: {
-				RoomName: room,
-				LocationName: location
-			}
-		};
-		let queryDataString = JSON.stringify(queryData);
-		request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (res && res.body) {
-				let events = this.parseDBEvents(res.body);
+		Promise.all([this.getEventsFromDB(), this.getPublishDatesFromAPI()]).then((data) => {
+			let events: Map<number, Event> = data[0];
+			let publishdates: { start: string, end: string, locked: boolean } = data[1];
+			let publishStart = publishdates.locked ? moment(publishdates.start).utc(true) : moment('08-05-1985');
+			let publishEnd = publishdates.locked ? moment(publishdates.end).utc(true) : moment('08-05-1985');
 
-				request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
-					if (recRes && recRes.body) {
-						let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
-						this.eventCache = eventsWithRecurringInfo;
-						this.setState({ events: eventsWithRecurringInfo, loading: false });
-					}
-				});
-			}
+			this.setState({
+				events: events,
+				publishPeriodStart: publishStart,
+				publishPeriodEnd: publishEnd,
+				loading: false
+			});
+		}).catch(() => {
+			// TODO: handle error
+		});
+	}
+
+	getEventsFromDB = (room: string = this.props.room, location: string = this.props.location): Promise<Map<number, Event>> => {
+		return new Promise((resolved, reject) => {
+			let queryData: {} = {
+				where: {
+					RoomName: room,
+					LocationName: location
+				}
+			};
+			let queryDataString = JSON.stringify(queryData);
+			request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body) {
+					let events = this.parseDBEvents(res.body);
+					request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
+						if (recRes && recRes.body) {
+							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
+							this.eventCache = eventsWithRecurringInfo;
+							resolved(eventsWithRecurringInfo);
+						} else
+							reject();
+					});
+				} else
+					reject();
+			});
+		});
+	}
+
+	getPublishDatesFromAPI = (): Promise<{ start: string, end: string, locked: boolean }> => {
+		return new Promise((resolved, reject) => {
+			request.get('/api/publishdates').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolved({ start: res.body.Start, end: res.body.End, locked: res.body.Locked });
+				else
+					reject();
+			});
 		});
 	}
 
@@ -886,6 +990,19 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	editEvent(event: Event, delta: Duration): void {
+		let eventStartString = event.start;
+		if (eventStartString.length < 20)
+			eventStartString += '.000Z';
+		let eventEndString = event.end;
+		if (eventEndString.length < 20)
+			eventEndString += '.000Z';
+		let eventStart = moment(eventStartString).utc();
+		let eventEnd = moment(eventEndString).utc();
+		if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+			this.forceUpdate();
+			return;
+		}
 
 		if (event.recurringInfo && !confirm('This is a recurring event. Do you want to continue this action and make the event independent?')) {
 			this.forceUpdate();
@@ -1293,7 +1410,34 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	// Store Calendar State /////////////////////////////////////////////////////////////////////////////////////////////////////////
-	cacheViewAndDate(view: any) {
+	cacheViewAndDate(view: any, element: any) {
+		let pps = this.state.publishPeriodStart;
+		let ppe = this.state.publishPeriodEnd;
+		let loading = this.state.loading;
+		let role = this.props.role;
+
+		element.find('th.fc-day-header.fc-widget-header').each(function () {
+			// @ts-ignore
+			var theDate = moment($(this).data('date')); /* th.data-date="YYYY-MM-DD" */
+			// @ts-ignore
+			$(this).html(buildDateColumnHeader(theDate));
+		});
+
+		function buildDateColumnHeader(theDate: any) {
+			var container = document.createElement('div');
+			var Date = document.createElement('div');
+			Date.textContent = theDate.format('ddd') + ' ' + theDate.format('M/DD');
+			container.appendChild(Date);
+			let d = moment(theDate);
+
+			if (d.isAfter(pps) && d.isBefore(ppe) && !loading && role !== 'administrator') {
+				container.style.color = '#dc3545';
+				container.style.borderBottom = 'solid 1px';
+				container.style.borderColor = '#dc3545';
+			}
+			return container;
+		}
+
 		this.currentView = view.name;
 		if (!this.currentDate)
 			this.currentDate = view.intervalStart;

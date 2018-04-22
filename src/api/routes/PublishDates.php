@@ -22,11 +22,14 @@ $app->put('/publishdates', function (Request $request, Response $response, array
 	$queryData = getInsertQueryData($request);
 
 	// return with 'bad request' response if request isn't correct
-	if (!isset($queryData['insertValues']) || !isset($queryData['insertValues']['Start']) || !isset($queryData['insertValues']['End'])) {
-		return $response->withStatus(400);
+	if (!isset($queryData['insertValues']) ||
+		!isset($queryData['insertValues']['Start']) ||
+		!isset($queryData['insertValues']['End']) ||
+		!isset($queryData['insertValues']['Locked'])) {
+			return $response->withStatus(400);
 	}
 
-	$publishDates = ['Start' => $queryData['insertValues']['Start'], 'End' => $queryData['insertValues']['End']];
+	$publishDates = ['Start' => $queryData['insertValues']['Start'], 'End' => $queryData['insertValues']['End'], 'Locked' => $queryData['insertValues']['Locked']];
 	$fp = fopen('../../src/api/config/PublishDates.json', 'w');
 	fwrite($fp, json_encode($publishDates));
 	fclose($fp);

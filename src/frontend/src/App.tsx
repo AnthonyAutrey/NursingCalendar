@@ -103,7 +103,12 @@ class App extends React.Component<{}, State> {
 			routes.push(
 				(
 					<Route key="/schedule" path="/schedule" >
-						<Scheduler handleActiveRouteChange={this.handleActiveRouteChange} cwid={this.state.cwid || 0} role={this.state.role || ''} />
+						<Scheduler
+							handleActiveRouteChange={this.handleActiveRouteChange}
+							cwid={this.state.cwid || 0}
+							role={this.state.role || ''}
+							handleShowAlert={this.handleShowAlert}
+						/>
 					</Route>
 				)
 			);
