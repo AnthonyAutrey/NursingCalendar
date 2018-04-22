@@ -66,7 +66,7 @@ export class NavigationBar extends React.Component<Props, {}> {
 					<a className="navbar-brand text-primary garamond mr-4 ml-2 d-none d-md-block" href="/">
 						<div className="d-flex justify-content-center align-items-center">
 							<img src="../../ulm-academic-logo-circle.png" alt="logo" style={{ maxWidth: 70 }} />
-							<h1 style={headerStyle} className="ml-2">
+							<h1 style={headerStyle} className="ml-3">
 								ULM Nursing Schedule
 							</h1>
 						</div>
