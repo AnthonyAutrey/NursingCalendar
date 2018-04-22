@@ -75,7 +75,7 @@ export class Scheduler extends React.Component<Props, State> {
 		if (!this.state.initialized)
 			return null;
 
-		if (this.state.rooms.length < 1)
+		if (this.allRooms.length < 1)
 			return (
 				<div>
 					<div className="col-lg-10 offset-lg-1">
@@ -149,7 +149,8 @@ export class Scheduler extends React.Component<Props, State> {
 				let rooms: any[] = res.body;
 				let parsedRooms = this.parseRoomsFromDB(rooms);
 				this.allRooms = parsedRooms;
-				this.lastSelectedRoom = this.allRooms[0];
+				if (this.allRooms.length > 0)
+					this.lastSelectedRoom = this.allRooms[0];
 				this.setState({ rooms: parsedRooms, initialized: true });
 			}
 		});
