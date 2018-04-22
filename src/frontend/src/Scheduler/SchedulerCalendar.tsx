@@ -816,8 +816,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		Promise.all([this.getEventsFromDB(), this.getPublishDatesFromAPI()]).then((data) => {
 			let events: Map<number, Event> = data[0];
 			let publishdates: { start: string, end: string } = data[1];
-			console.log(moment(publishdates.start));
-			console.log(moment(publishdates.end));
 			this.setState({
 				events: events,
 				publishPeriodStart: moment(publishdates.start).utc(true),

@@ -19,6 +19,7 @@ interface State {
 	toolbarMessage: string;
 	toolbarStatus?: 'error' | 'success' | 'info';
 	initialized: boolean;
+	showRoomSelectorOnMobile: boolean;
 }
 
 export interface Room {
@@ -51,7 +52,8 @@ export class Scheduler extends React.Component<Props, State> {
 			rooms: [],
 			selectedRoom: 0,
 			toolbarMessage: this.defaultToolbarMessage,
-			initialized: false
+			initialized: false,
+			showRoomSelectorOnMobile: false
 		};
 		this.getAllRoomsFromDB();
 	}
@@ -108,7 +110,7 @@ export class Scheduler extends React.Component<Props, State> {
 			<div>
 				<div className="Scheduler container-fluid">
 					<div className="row">
-						<div className="col-md-3 mb-3 d-print-none" ref={(container) => { this.roomComponentContainer = container; }}>
+						<div className="col-md-3 mb-3 d-print-none d-none d-md-block" ref={(container) => { this.roomComponentContainer = container; }}>
 							<RoomFilter container={this.roomComponentContainer} filterChangeHandler={this.filterChangeHandler} />
 							<RoomSelector
 								rooms={this.state.rooms}
@@ -116,7 +118,7 @@ export class Scheduler extends React.Component<Props, State> {
 								handleUpdateSelectedRoom={this.handleUpdateSelectedRoom}
 							/>
 						</div>
-						<div className="col-md-9">
+						<div className="col-md-9 mb-2">
 							<SchedulerCalendar
 								ref={(schedulerCalendar) => { this.schedulerCalendar = schedulerCalendar; }}
 								handleToolbarMessage={this.handleToolbarMessage}
@@ -127,6 +129,28 @@ export class Scheduler extends React.Component<Props, State> {
 								cwid={this.props.cwid}
 								role={this.props.role}
 							/>
+						</div>
+						<div className="col-md-3 mb-3 d-print-none d-md-none" ref={(container) => { this.roomComponentContainer = container; }}>
+							{
+								this.state.showRoomSelectorOnMobile ?
+									<div>
+										<RoomFilter container={this.roomComponentContainer} filterChangeHandler={this.filterChangeHandler} />
+										<RoomSelector
+											rooms={this.state.rooms}
+											selectedRoom={selectedRoom}
+											handleUpdateSelectedRoom={this.handleUpdateSelectedRoom}
+										/>
+									</div>
+									:
+									<button
+										className="btn btn-primary btn-block mb-2"
+										onClick={() => this.setState({ showRoomSelectorOnMobile: !this.state.showRoomSelectorOnMobile })}
+									>
+										<span className=" oi oi-spreadsheet" />
+										<span>&nbsp;&nbsp;</span>
+										Select Room
+									</button>
+							}
 						</div>
 					</div>
 				</div>
@@ -263,7 +287,7 @@ export class Scheduler extends React.Component<Props, State> {
 
 		if (shouldLeaveRoom) {
 			this.lastSelectedRoom = this.state.rooms[index];
-			this.setState({ selectedRoom: index });
+			this.setState({ selectedRoom: index, showRoomSelectorOnMobile: false });
 		}
 	}
 }
