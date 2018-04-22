@@ -272,7 +272,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			return;
 
 		// Check if publish period
-		if (end.isAfter(this.state.publishPeriodStart) && start.isBefore(this.state.publishPeriodEnd)) {
+		if (end.isAfter(this.state.publishPeriodStart) && start.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
 			alert('This is the publish period!!');
 			this.forceUpdate();
 			return;
@@ -774,7 +774,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				eventEndString += '.000Z';
 			let eventStart = moment(eventStartString).utc();
 			let eventEnd = moment(eventEndString).utc();
-			if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd)) {
+			if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
 				alert('This is the publish period!!');
 				return;
 			}
@@ -947,6 +947,23 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	editEvent(event: Event, delta: Duration): void {
+		let eventStartString = event.start;
+		if (eventStartString.length < 20)
+			eventStartString += '.000Z';
+		let eventEndString = event.end;
+		if (eventEndString.length < 20)
+			eventEndString += '.000Z';
+		let eventStart = moment(eventStartString).utc();
+		let eventEnd = moment(eventEndString).utc();
+		if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+			alert('This is the publish period!!');
+			this.forceUpdate();
+			return;
+		}
+		// if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+		// 	alert('This is the publish period!!');
+		// 	return;
+		// }
 
 		if (event.recurringInfo && !confirm('This is a recurring event. Do you want to continue this action and make the event independent?')) {
 			this.forceUpdate();

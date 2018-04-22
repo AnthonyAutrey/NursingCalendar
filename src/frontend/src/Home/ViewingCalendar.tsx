@@ -215,6 +215,27 @@ export class ViewingCalendar extends React.Component<Props, State> {
 					reject();
 			});
 		}).then((userGroups: any) => {
+			Promise.all([this.getEventsFromDB(userGroups), this.getPublishDatesFromAPI()]).then((data) => {
+				let events: Event[] = data[0];
+				let publishdates: { start: string, end: string } = data[1];
+
+				if (this.props.role === 'student')
+					events = this.filterEventsByPublishPeriod(events, moment(publishdates.start).utc(true), moment(publishdates.end).utc(true).add(1, 'days'));
+
+				this.setState({ events: events, loading: false });
+			}).catch(() => {
+				// TODO: handle error
+			});
+		}).catch(() => {
+			alert('error, couldn\'t get events!');
+			// TODO: Handle Failure
+		});
+
+		return groups;
+	}
+
+	getEventsFromDB = (userGroups: any): Promise<Event[]> => {
+		return new Promise((resolve, reject) => {
 			let eventQueryData = {
 				where: {
 					GroupName: userGroups.map((group: any) => {
@@ -229,18 +250,51 @@ export class ViewingCalendar extends React.Component<Props, State> {
 						if (recRes && recRes.body) {
 							let events = this.parseDBEvents(res.body);
 							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
-							this.setState({ events: eventsWithRecurringInfo, loading: false });
-						}
+							resolve(eventsWithRecurringInfo);
+						} else
+							reject();
 					});
 				}
 			});
-
-		}).catch(() => {
-			alert('error, couldn\'t get events!');
-			// TODO: Handle Failure
 		});
+	}
 
-		return groups;
+	getPublishDatesFromAPI = (): Promise<{ start: string, end: string }> => {
+		return new Promise((resolve, reject) => {
+			request.get('/api/publishdates').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve({ start: res.body.Start, end: res.body.End });
+				else
+					reject();
+			});
+		});
+	}
+
+	filterEventsByPublishPeriod = (events: Event[], publishPeriodStart: moment.Moment, publishPeriodEnd: moment.Moment): Event[] => {
+		return events.filter(event => {
+
+			let eventStartString = event.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = event.end || '';
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+
+			console.log('start');
+			console.log(eventStart.toISOString());
+			console.log(publishPeriodStart.toISOString());
+			console.log('end');
+			console.log(eventEnd.toISOString());
+			console.log(publishPeriodEnd.toISOString());
+
+			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd)) {
+				console.log('This is the publish period!!');
+				return true;
+			} else
+				return false;
+		});
 	}
 
 	applyRecurringInfoToEvents = (events: Event[], recurringBody: any[]): Event[] => {
