@@ -335,26 +335,26 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		if (recurringInfo && placeholder)
 			recurringEvents = this.getRecurringEvents(title, description, groups, placeholder.start, placeholder.end, recurringInfo);
 
-		// if (recurringInfo && this.checkIfRecurringEventsFallInPublishPeriod(recurringEvents) && this.props.role !== 'administrator') {
-		// 	this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
-		// 	this.closeEventCreationModal();
-		// 	return;
-		// }
+		if (recurringInfo && this.checkIfRecurringEventsFallInPublishPeriod(recurringEvents) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+			this.closeEventCreationModal();
+			return;
+		}
 
-		// let filteredEventsAndConflicts = this.getFilteredEventsAndConflicts(recurringEvents);
-		// let conflictingEvents = filteredEventsAndConflicts.conflictingEvents;
-		// let filteredRecurringEvents = filteredEventsAndConflicts.filteredEvents;
-		// if (conflictingEvents.length > 0) {
-		// 	let confirmMessage = 'Some recurring events couldn\'t be added due to conflicts with the following events: ';
-		// 	conflictingEvents.forEach(event => {
-		// 		confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).utc().toLocaleString().slice(0, 24) +
-		// 			'\n      end: ' + moment(event.end).utc().toLocaleString().slice(0, 24);
-		// 	});
-		// 	if (!confirm(confirmMessage + '\n\nDo you want to continue?'))
-		// 		return;
-		// }
+		let filteredEventsAndConflicts = this.getFilteredEventsAndConflicts(recurringEvents);
+		let conflictingEvents = filteredEventsAndConflicts.conflictingEvents;
+		let filteredRecurringEvents = filteredEventsAndConflicts.filteredEvents;
+		if (conflictingEvents.length > 0) {
+			let confirmMessage = 'Some recurring events couldn\'t be added due to conflicts with the following events: ';
+			conflictingEvents.forEach(event => {
+				confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).utc().toLocaleString().slice(0, 24) +
+					'\n      end: ' + moment(event.end).utc().toLocaleString().slice(0, 24);
+			});
+			if (!confirm(confirmMessage + '\n\nDo you want to continue?'))
+				return;
+		}
 
-		recurringEvents.forEach(event => {
+		filteredRecurringEvents.forEach(event => {
 			index++;
 			event.id = index;
 			events.set(index, event);
@@ -451,7 +451,12 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					RecurringEvents.getWeekDayCount(iterateBeginDate) + RecurringEvents.getDayOfWeekChar(iterateBeginDate) === recurringInfo.monthlyDay) ||
 				(recurringInfo.type === 'weekly' && recurringInfo.weeklyDays &&
 					recurringInfo.weeklyDays.includes(RecurringEvents.getDayOfWeekChar(iterateBeginDate))) ||
-				recurringInfo.type === 'daily'))
+				recurringInfo.type === 'daily')) {
+
+				let color = '#800029';
+				if (groups.length === 1)
+					color = ColorGenerator.getColor(groups[0]);
+
 				recurringEvents.push({
 					id: -1,
 					location: this.props.location,
@@ -465,8 +470,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					groups: groups,
 					pendingOverride: false,
 					recurringInfo: recurringInfo,
-					color: ColorGenerator.getColor(groups[0])
+					color: color
 				});
+			}
 
 			iterateBeginDate.add(1, 'days');
 			iterateEndDate.add(1, 'days');
@@ -475,31 +481,51 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		return recurringEvents;
 	}
 
-	getFilteredEventsAndConflicts = (events: Event[]): { filteredEvents: Event[], conflictingEvents: Event[] } => {
+	getFilteredEventsAndConflicts = (recurringEvents: Event[]): { filteredEvents: Event[], conflictingEvents: Event[] } => {
 		let conflictingEvents: Event[] = [];
 
-		let filteredEvents = events.filter(recurringEvent => {
-			if (recurringEvent.start.substr(recurringEvent.start.length - 1, 1) !== 'Z')
-				recurringEvent.start += '.000Z';
-			if (recurringEvent.end.substr(recurringEvent.end.length - 1, 1) !== 'Z')
-				recurringEvent.end += '.000Z';
+		let timeSet = new Set<string>();
+		this.getStateEventsAsArray().forEach((stateEvent: Event) => {
+			let eventStartString = stateEvent.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = stateEvent.end || '';
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
 
-			let recurringEventStart = moment(recurringEvent.start);
-			let recurringEventEnd = moment(recurringEvent.end);
+			let iterateDate = eventStart.clone();
+
+			while (iterateDate.isBefore(eventEnd)) {
+				timeSet.add(iterateDate.toISOString());
+				iterateDate.add(15, 'minutes');
+			}
+			timeSet.add(eventEnd.toISOString());
+		});
+
+		let filteredEvents = recurringEvents.filter(recurringEvent => {
+			if (recurringEvent.start.length < 20)
+				recurringEvent.start += '.000Z';
+			if (recurringEvent.end.length < 20)
+				recurringEvent.end += '.000Z';
+			let recurringEventStart = moment(recurringEvent.start).utc().add(1, 'milliseconds');
+			let recurringEventEnd = moment(recurringEvent.end).utc().add(-1, 'milliseconds');
+			let iterateDate = recurringEventStart.clone();
 
 			let noConflicts = true;
-			this.getStateEventsAsArray().forEach((stateEvent: Event) => {
-				if (stateEvent.start.substr(stateEvent.start.length - 1, 1) !== 'Z')
-					stateEvent.start += '.000Z';
-				if (stateEvent.end.substr(stateEvent.end.length - 1, 1) !== 'Z')
-					stateEvent.end += '.000Z';
-
-				if (recurringEventStart.isBefore(moment(stateEvent.end).utc()) &&
-					recurringEventEnd.isAfter(moment(stateEvent.start).utc())) {
-					conflictingEvents.push(stateEvent);
+			while (iterateDate.isBefore(recurringEventEnd)) {
+				if (timeSet.has(iterateDate.toISOString())) {
 					noConflicts = false;
 				}
-			});
+
+				iterateDate.add(15, 'minutes');
+			}
+			if (timeSet.has(recurringEventEnd.toISOString()))
+				noConflicts = false;
+
+			if (!noConflicts)
+				conflictingEvents.push(recurringEvent);
 
 			return noConflicts;
 		});
