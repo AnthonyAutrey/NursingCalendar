@@ -11,6 +11,7 @@ interface Props {
 	cwid: number;
 	role: string;
 	handleActiveRouteChange: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -128,6 +129,7 @@ export class Scheduler extends React.Component<Props, State> {
 								location={selectedLocationName}
 								cwid={this.props.cwid}
 								role={this.props.role}
+								handleShowAlert={this.props.handleShowAlert}
 							/>
 						</div>
 						<div className="col-md-3 mb-3 d-print-none d-md-none" ref={(container) => { this.roomComponentContainer = container; }}>

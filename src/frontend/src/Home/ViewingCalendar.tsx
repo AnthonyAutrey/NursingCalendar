@@ -282,17 +282,9 @@ export class ViewingCalendar extends React.Component<Props, State> {
 			let eventStart = moment(eventStartString).utc();
 			let eventEnd = moment(eventEndString).utc();
 
-			console.log('start');
-			console.log(eventStart.toISOString());
-			console.log(publishPeriodStart.toISOString());
-			console.log('end');
-			console.log(eventEnd.toISOString());
-			console.log(publishPeriodEnd.toISOString());
-
-			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd)) {
-				console.log('This is the publish period!!');
+			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd))
 				return true;
-			} else
+			else
 				return false;
 		});
 	}

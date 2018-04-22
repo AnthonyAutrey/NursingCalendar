@@ -21,11 +21,11 @@ export class Alert extends React.Component<{}, State> {
 		if (!this.state.show)
 			return null;
 
-		let className = 'bg-light border-bottom rounded m-0 d-flex w-100';
+		let className = 'bg-light border-bottom m-0 d-flex w-100';
 		if (this.state.style === 'error')
-			className = 'bg-light text-danger border-bottom border-danger rounded m-0 d-flex w-100';
+			className = 'bg-light text-danger border-bottom border-danger m-0 d-flex w-100';
 		if (this.state.style === 'success')
-			className = 'bg-light text-success border-bottom border-success rounded m-0 d-flex w-100';
+			className = 'bg-light text-success border-bottom border-success m-0 d-flex w-100';
 
 		return (
 			<div className={className} style={{ position: 'fixed', top: '0px', zIndex: 9999999, fontSize: '1.1em' }}>

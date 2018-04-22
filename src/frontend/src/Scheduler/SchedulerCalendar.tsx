@@ -22,6 +22,7 @@ interface Props {
 	handleToolbarMessage: Function;
 	handleToolbarText: Function;
 	handleToolbarReset: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -249,16 +250,19 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					selectable={true}
 					selectOverlap={false}
 					selectHelper={true}
-					viewRender={(view: any) => this.cacheViewAndDate(view)}
+					viewRender={(view: any, element: any) => this.cacheViewAndDate(view, element)}
 					firstDay={1}
 					eventLongPressDelay={0}
 					selectLongPressDelay={300}
 					select={this.handleCalendarSelect}
 				// selectAllow={(selectInfo: any) => {
 				// 	if (selectInfo.end.isAfter(this.state.publishPeriodStart) && selectInfo.start.isBefore(this.state.publishPeriodEnd)) {
+				// 		console.log('NO');
 				// 		return false;
-				// 	} else
+				// 	} else {
+				// 		// console.log('YES');
 				// 		return true;
+				// 	}
 				// }}
 				/>
 			</div>
@@ -273,7 +277,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 		// Check if publish period
 		if (end.isAfter(this.state.publishPeriodStart) && start.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
-			alert('This is the publish period!!');
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
 			this.forceUpdate();
 			return;
 		}
@@ -340,6 +344,12 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		if (recurringInfo && placeholder)
 			recurringEvents = this.getRecurringEvents(title, description, groups, placeholder.start, placeholder.end, recurringInfo);
 
+		if (recurringInfo && this.checkIfRecurringEventsFallInPublishPeriod(recurringEvents) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+			this.closeEventCreationModal();
+			return;
+		}
+
 		let filteredEventsAndConflicts = this.getFilteredEventsAndConflicts(recurringEvents);
 		let conflictingEvents = filteredEventsAndConflicts.conflictingEvents;
 		let filteredRecurringEvents = filteredEventsAndConflicts.filteredEvents;
@@ -363,6 +373,36 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	// Recurring Events //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	checkIfRecurringEventsFallInPublishPeriod = (recurringEvents: Event[]) => {
+		let eventInPublishPeriod = false;
+		recurringEvents.forEach(event => {
+
+			let eventStartString = event.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = event.end || '';
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+
+			let publishPeriodStart = this.state.publishPeriodStart;
+			let publishPeriodEnd = this.state.publishPeriodEnd;
+
+			console.log('start');
+			console.log(eventStart.toISOString());
+			console.log(publishPeriodStart.toISOString());
+			console.log('end');
+			console.log(eventEnd.toISOString());
+			console.log(publishPeriodEnd.toISOString());
+
+			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd))
+				eventInPublishPeriod = true;
+		});
+
+		return eventInPublishPeriod;
+	}
 
 	getDailyRecurringEvents(
 		title: string,
@@ -775,7 +815,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			let eventStart = moment(eventStartString).utc();
 			let eventEnd = moment(eventEndString).utc();
 			if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
-				alert('This is the publish period!!');
+				this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
 				return;
 			}
 		}
@@ -956,14 +996,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		let eventStart = moment(eventStartString).utc();
 		let eventEnd = moment(eventEndString).utc();
 		if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
-			alert('This is the publish period!!');
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
 			this.forceUpdate();
 			return;
 		}
-		// if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
-		// 	alert('This is the publish period!!');
-		// 	return;
-		// }
 
 		if (event.recurringInfo && !confirm('This is a recurring event. Do you want to continue this action and make the event independent?')) {
 			this.forceUpdate();
@@ -1371,7 +1407,34 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	// Store Calendar State /////////////////////////////////////////////////////////////////////////////////////////////////////////
-	cacheViewAndDate(view: any) {
+	cacheViewAndDate(view: any, element: any) {
+		let pps = this.state.publishPeriodStart;
+		let ppe = this.state.publishPeriodEnd;
+		let loading = this.state.loading;
+		let role = this.props.role;
+
+		element.find('th.fc-day-header.fc-widget-header').each(function () {
+			// @ts-ignore
+			var theDate = moment($(this).data('date')); /* th.data-date="YYYY-MM-DD" */
+			// @ts-ignore
+			$(this).html(buildDateColumnHeader(theDate));
+		});
+
+		function buildDateColumnHeader(theDate: any) {
+			var container = document.createElement('div');
+			var Date = document.createElement('div');
+			Date.textContent = theDate.format('ddd') + ' ' + theDate.format('M/DD');
+			container.appendChild(Date);
+			let d = moment(theDate);
+
+			if (d.isAfter(pps) && d.isBefore(ppe) && !loading && role !== 'administrator') {
+				container.style.color = '#dc3545';
+				container.style.borderBottom = 'solid 1px';
+				container.style.borderColor = '#dc3545';
+			}
+			return container;
+		}
+
 		this.currentView = view.name;
 		if (!this.currentDate)
 			this.currentDate = view.intervalStart;
