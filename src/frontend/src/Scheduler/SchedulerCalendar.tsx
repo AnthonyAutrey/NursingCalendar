@@ -77,7 +77,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			groupOptionsFromAPI: [],
 			loading: false,
 			publishPeriodStart: moment('8-05-1985'),
-			publishPeriodEnd: moment('8-05-2985'),
+			publishPeriodEnd: moment('8-05-2585'),
 		};
 	}
 
@@ -855,11 +855,14 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		this.setState({ loading: true });
 		Promise.all([this.getEventsFromDB(), this.getPublishDatesFromAPI()]).then((data) => {
 			let events: Map<number, Event> = data[0];
-			let publishdates: { start: string, end: string } = data[1];
+			let publishdates: { start: string, end: string, locked: boolean } = data[1];
+			let publishStart = publishdates.locked ? moment(publishdates.start).utc(true) : moment('08-05-1985');
+			let publishEnd = publishdates.locked ? moment(publishdates.end).utc(true) : moment('08-05-1985');
+
 			this.setState({
 				events: events,
-				publishPeriodStart: moment(publishdates.start).utc(true),
-				publishPeriodEnd: moment(publishdates.end).utc(true).add(1, 'days'),
+				publishPeriodStart: publishStart,
+				publishPeriodEnd: publishEnd,
 				loading: false
 			});
 		}).catch(() => {
@@ -893,11 +896,11 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		});
 	}
 
-	getPublishDatesFromAPI = (): Promise<{ start: string, end: string }> => {
+	getPublishDatesFromAPI = (): Promise<{ start: string, end: string, locked: boolean }> => {
 		return new Promise((resolved, reject) => {
 			request.get('/api/publishdates').end((error: {}, res: any) => {
 				if (res && res.body)
-					resolved({ start: res.body.Start, end: res.body.End });
+					resolved({ start: res.body.Start, end: res.body.End, locked: res.body.Locked });
 				else
 					reject();
 			});
