@@ -74,7 +74,6 @@ class App extends React.Component<{}, State> {
 	}
 
 	handleLogout = () => {
-		// this.setState({ sessionRetreived: false });
 		request.get('/api/logout').end((error: {}, res: any) => {
 			if (res && res.body)
 				location.reload();
