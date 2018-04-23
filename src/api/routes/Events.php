@@ -6,10 +6,10 @@ use \Psr\Http\Message\ResponseInterface as Response;
 // Event Routes ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Create //
-$app->put('/events', function (Request $request, Response $response, array $args) {
+$app->put('/events', function (Request $request, Response $response, array $args) use ($db) {
 	$queryDataArray = getInsertQueryData($request);
 	$results = [];
-	$queries = [""];	
+	$queries = [""];
 
 	if (array_key_exists("insertValues",$queryDataArray))
 		$queryDataArray = [$queryDataArray];
@@ -32,7 +32,7 @@ $app->put('/events', function (Request $request, Response $response, array $args
 
 	foreach ($queries as $query) {
 		if ($query !== "")
-			array_push($results, DBUtil::runCommand($query));
+			array_push($results, DBUtil::runCommandWithDB($db, $query));
 	}
 
 	foreach ($queryDataArray as $queryData) {
@@ -41,7 +41,7 @@ $app->put('/events', function (Request $request, Response $response, array $args
 		$room = $queryData['insertValues']['RoomName'];
 
 		if (isset($queryData['groups']) && !is_null($queryData['groups'])) {
-			$results['Insert Groups '.', '.$eventID.', '.$location.', '.$room] = insertEventGroups($queryData['groups'], $eventID, $location, $room);
+			array_push($results, insertEventGroups($queryData['groups'], $eventID, $location, $room));
 		}
 	}
 

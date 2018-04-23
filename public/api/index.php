@@ -12,6 +12,7 @@ require '../../src/api/middleware/Authenticator.php';
 // Configuration //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 $config = [
+	'db' => DBConfig::getConnection(),
     'settings' => [
 		'displayErrorDetails' => false,
 		'addContentLengthHeader' => false,
@@ -21,6 +22,7 @@ $config = [
 ];
 
 $app = new \Slim\App($config);
+$db = DBConfig::getConnection();
 
 // Start Session /////////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -6,7 +6,7 @@ use \Psr\Http\Message\ResponseInterface as Response;
 // UserGroup Routes /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Create //
-$app->put('/recurringeventrelations', function (Request $request, Response $response, array $args) {
+$app->put('/recurringeventrelations', function (Request $request, Response $response, array $args) use ($db) {
 	$queryDataArray = getInsertQueryData($request);
 	$results = [];
 	$queries = [""];	
@@ -32,7 +32,7 @@ $app->put('/recurringeventrelations', function (Request $request, Response $resp
 
 	foreach ($queries as $query) {
 		if ($query !== "")
-			array_push($results, DBUtil::runCommand($query));
+			array_push($results, DBUtil::runCommandWithDB($db, $query));
 	}
 
 	$response->getBody()->write(json_encode($results));

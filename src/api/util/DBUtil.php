@@ -7,13 +7,29 @@ class DBUtil {
 	// Query Execution ////////////////////////////////////////////////////////////////////////////////////////////
 	public static function runCommand($query): String {
 		try {
-			$db = new DBConfig();
-			$db = $db->connect();
+			// $db = new DBConfig();
+			// $db = $db->connect();
+
+			$db = DBConfig::getConnection();
 
 			$statement = $db->prepare($query);
 			$statement->execute();
 			$results = $statement->rowCount();
-			$db = null;
+			// $db = null;
+
+			return $results;
+
+		} catch(PDOException $ex) {
+			echo $ex->getMessage(); // TODO: remove this for production
+			return "error";
+		}
+	}
+
+	public static function runCommandWithDB($db, $query): String {
+		try {
+			$statement = $db->prepare($query);
+			$statement->execute();
+			$results = $statement->rowCount();
 
 			return $results;
 
@@ -25,13 +41,14 @@ class DBUtil {
 
 	public static function runQuery($query): String {
 		try {
-			$db = new DBConfig();
-			$db = $db->connect();
+			// $db = new DBConfig();
+			// $db = $db->connect();
+			$db = DBConfig::getConnection();
 
 			$statement = $db->prepare($query);
 			$statement->execute();
 			$results = $statement->fetchAll(PDO::FETCH_OBJ);
-			$db = null;
+			// $db = null;
 			return json_encode($results);
 
 		} catch(PDOException $ex) {

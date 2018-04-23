@@ -147,10 +147,11 @@ function getEventGroupsToInsert(Request $request) : array {
 	return sanitize($groups);
 }
 
-function insertEventGroups($groups, $eventID, $location, $room) : array {
+function insertEventGroups($groups, $eventID, $location, $room) {
 	$groupsToInsert = $groups;
 	$insertResults = [];
 	$queries = [""];
+	$db = DBConfig::getConnection();
 
 	foreach ($groupsToInsert as $groupToInsert) {
 		$groupInsertValues = array();
@@ -167,7 +168,7 @@ function insertEventGroups($groups, $eventID, $location, $room) : array {
 
 	foreach ($queries as $query) {
 		if ($query !== "")
-			$insertResults[$groupToInsert] = DBUtil::runCommand($query);
+			$insertResults[$groupToInsert] = DBUtil::runCommandWithDB($db, $query);
 	}
 
 	return $insertResults;
