@@ -76,7 +76,7 @@ class App extends React.Component<{}, State> {
 	handleLogout = () => {
 		request.get('/api/logout').end((error: {}, res: any) => {
 			if (res && res.body)
-				location.reload();
+				window.location.href = '/';
 			else
 				this.handleShowAlert('error', 'Error logging out.');
 		});
