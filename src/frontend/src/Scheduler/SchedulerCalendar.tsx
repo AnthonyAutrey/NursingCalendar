@@ -1284,6 +1284,11 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					request.delete('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body) {
 							this.logEventDeletions(eventsIDsToDelete);
+							// TODO: Notify of event deletion
+							console.log('just deleted events');
+							console.log(eventsIDsToDelete);
+							this.sendNotificationsToOwnersIfDeletedByNonOwner(eventsIDsToDelete);
+
 							resolveOuter();
 						} else {
 							console.log('deleteDBEventsNotInClient failed rejectouter');
@@ -1317,6 +1322,40 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				}
 			};
 			let queryDataString = JSON.stringify(queryData);
+			request.put('/api/notifications').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (!res || !res.body)
+					alert('sending unowned event notification failed! Handle this properly!');
+			});
+		});
+	}
+
+	sendNotificationsToOwnersIfDeletedByNonOwner(eventIDsToDelete: number[]) {
+		let unownedDeletedEvents: Event[] = [];
+		console.log('eventCache');
+		console.log(this.eventCache);
+		this.eventCache.forEach(event => {
+			if ((eventIDsToDelete.includes(event.id) ||
+				eventIDsToDelete.includes(Number(event.id))) &&
+				Number(event.cwid) !== Number(this.props.cwid))
+				unownedDeletedEvents.push(event);
+		});
+		console.log('unownedDeletedEvents');
+		console.log(unownedDeletedEvents);
+
+		unownedDeletedEvents = this.exludeDuplicateRecurringEvents(unownedDeletedEvents);
+		console.log('after remove duplicate recurring...');
+		console.log(unownedDeletedEvents);
+
+		unownedDeletedEvents.forEach(unownedEvent => {
+			let queryData = {
+				insertValues: {
+					'Title': 'Event Deleted!',
+					'Message': 'Your event, \'' + unownedEvent.title + '\', has been deleted by an admin!',
+					'ToCWID': unownedEvent.cwid
+				}
+			};
+			let queryDataString = JSON.stringify(queryData);
+			console.log(queryData);
 			request.put('/api/notifications').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (!res || !res.body)
 					alert('sending unowned event notification failed! Handle this properly!');
