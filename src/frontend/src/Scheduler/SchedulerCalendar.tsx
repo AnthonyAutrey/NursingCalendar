@@ -1397,11 +1397,13 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	getClientEventsNotYetInDB(alreadyInDB: number[]): Event[] {
 		let clientEventsNotInDBMap: Map<number, Event> = this.cloneStateEvents();
-		alreadyInDB.forEach((id) => {
+		alreadyInDB.forEach((id: number) => {
+			clientEventsNotInDBMap.delete(Number(id));
 			clientEventsNotInDBMap.delete(id);
 		});
 
 		let clientEventsNotYetInDB: Event[] = Array.from(clientEventsNotInDBMap.values());
+
 		return clientEventsNotYetInDB;
 	}
 
