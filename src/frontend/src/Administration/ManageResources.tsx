@@ -107,7 +107,6 @@ export class ManageResources extends React.Component<Props, State> {
 									/>
 								</div>
 							</div>
-							{/*TODO Add a tooltip and fix that shizzle*/}
 							<div className="form-group row">
 								<label className="col-lg-4 col-form-label text-left">Is this resource&nbsp;
 									<a
@@ -420,7 +419,7 @@ export class ManageResources extends React.Component<Props, State> {
 			return;
 
 		let newResourceCount = 0;
-		
+
 		if (this.state.resources.length !== 0)
 			this.state.resources.forEach(resource => {
 				if (resource.name.substr(0, 12) === 'New Resource')
@@ -452,7 +451,10 @@ export class ManageResources extends React.Component<Props, State> {
 	}
 
 	handleDeleteResource = (index: number) => {
-		if (!confirm('Are you sure you want to delete this resource?'))
+		if (
+			!confirm(
+				'Are you sure you want to delete this resource?' +
+				' This resource will be removed from all rooms. This action cannot be reverted after clicking \'Submit Changes\'!'))
 			return;
 
 		let resources = this.state.resources.slice(0);

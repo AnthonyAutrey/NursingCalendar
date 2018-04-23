@@ -388,7 +388,8 @@ export class ManageLocations extends React.Component<Props, State> {
 	}
 
 	handleDeleteLocation = (index: number) => {
-		if (!confirm('Are you sure you want to delete this location?'))
+		if (!confirm('Are you sure you want to delete this location? This will delete the location and all of its associated rooms. ' +
+			'This action cannot be reverted after clicking \'Submit Changes\'!'))
 			return;
 
 		let locations = this.state.locations.slice(0);

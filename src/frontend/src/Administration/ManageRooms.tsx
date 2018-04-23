@@ -89,6 +89,55 @@ export class ManageRooms extends React.Component<Props, State> {
 		if (!this.state.initialized)
 			return null;
 
+		if (this.state.locations.length === 0) {
+			return (
+				<div>
+					<hr />
+					<div className="w-100 px-5">
+						<div className="card-body">
+							<div className="row">
+								<h4 className="card-title">Manage Rooms</h4>
+							</div>
+							<hr />
+							There are currently no locations. Please add a location in order to manage rooms.
+						</div>
+					</div>
+					<div className="form-group d-flex">
+						<div className="ml-auto" style={{ width: '120px !important' }} />
+					</div>
+					<hr />
+				</div>
+			);
+		}
+		if (this.state.rooms.length === 0)
+			return (
+				<div>
+					<hr />
+					<div className="w-100 px-5">
+						<div className="card-body">
+							<div className="row">
+								<h4 className="card-title">Manage Rooms</h4>
+								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddRoom}>
+									Add Room &nbsp;&nbsp;
+									<span className="plusIcon oi oi-size-sm oi-plus" />
+								</button>
+							</div>
+							<hr />
+						</div>
+					</div>
+					<hr />
+					<div className="row">
+						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+							Submit Changes
+							</button>
+					</div>
+					<div className="form-group d-flex">
+						<div className="ml-auto" style={{ width: '120px !important' }} />
+					</div>
+					<hr />
+				</div>
+			);
+
 		let roomOptions = this.state.rooms.map((room, index) => {
 			return (<option key={uuid()} value={index}>{room.locationName + ' - ' + room.roomName}</option>);
 		});
@@ -109,93 +158,88 @@ export class ManageRooms extends React.Component<Props, State> {
 				handleDeleteResource={this.handleDeleteResource}
 			/>);
 
-		if (this.state.rooms.length === 0)
-			return (
-				<div>asdf</div>
-			);
-		else
-			return (
-				<div>
-					<hr />
-					<div className="w-100 px-5">
-						<div className="card-body">
-							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Rooms</span>
-							<button className="btn btn-primary float-right" onClick={this.handleAddRoom}>
-								Add Room &nbsp;&nbsp;
+		return (
+			<div>
+				<hr />
+				<div className="w-100 px-5">
+					<div className="card-body">
+						<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Rooms</span>
+						<button className="btn btn-primary float-right" onClick={this.handleAddRoom}>
+							Add Room &nbsp;&nbsp;
 							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
-							</button>
-							<hr />
-							<div className="form-group row">
-								<label className="col-lg-4 col-form-label text-left">Room:</label>
-								<div className="col-lg-8">
-									<select
-										className="form-control"
-										value={this.state.selectedRoomIndex}
-										onChange={(e) => this.handleSelectedRoomChange(e)}
-									>
-										{roomOptions}
-									</select>
-								</div>
-							</div>
-							<hr />
-							<div className="form-group row">
-								<label className="col-lg-4 col-form-label text-left">Location:</label>
-								<div className="col-lg-8">
-									<select
-										className="form-control"
-										value={selectedLocation}
-										onChange={(e) => this.handleChangeLocation(e, this.state.selectedRoomIndex)}
-									>
-										{locationOptions}
-									</select>
-								</div>
-							</div>
-							<div className="form-group row">
-								<label className="col-lg-4 col-form-label text-left">Room Name:</label>
-								<div className="col-lg-8">
-									<input
-										className="form-control form-control"
-										type="text"
-										value={this.state.rooms[this.state.selectedRoomIndex].roomName}
-										onChange={(e) => this.handleChangeRoomName(e, this.state.selectedRoomIndex)}
-									/>
-								</div>
-							</div>
-							<div className="form-group row">
-								<label className="col-lg-4 col-form-label text-left">Capacity:</label>
-								<div className="col-lg-8">
-									<input
-										className="form-control form-control"
-										type="number"
-										value={this.state.rooms[this.state.selectedRoomIndex].capacity}
-										onChange={(e) => this.handleChangeCapacity(e, this.state.selectedRoomIndex)}
-									/>
-								</div>
-							</div>
-							{roomResourceSelector}
-							<div className="form-group row">
-								<div className="col-lg-12">
-									<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteRoom(this.state.selectedRoomIndex)}>
-										<span className=" oi oi-trash" />
-										<span>&nbsp;&nbsp;</span>
-										Delete Room
 						</button>
-								</div>
-							</div>
-							<hr />
-							<div className="row">
-								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={this.handlePersistChanges}>
-									Submit Changes
-							</button>
-							</div>
-							<div className="form-group d-flex">
-								<div className="ml-auto" style={{ width: '120px !important' }} />
+						<hr />
+						<div className="form-group row">
+							<label className="col-lg-4 col-form-label text-left">Room:</label>
+							<div className="col-lg-8">
+								<select
+									className="form-control"
+									value={this.state.selectedRoomIndex}
+									onChange={(e) => this.handleSelectedRoomChange(e)}
+								>
+									{roomOptions}
+								</select>
 							</div>
 						</div>
+						<hr />
+						<div className="form-group row">
+							<label className="col-lg-4 col-form-label text-left">Location:</label>
+							<div className="col-lg-8">
+								<select
+									className="form-control"
+									value={selectedLocation}
+									onChange={(e) => this.handleChangeLocation(e, this.state.selectedRoomIndex)}
+								>
+									{locationOptions}
+								</select>
+							</div>
+						</div>
+						<div className="form-group row">
+							<label className="col-lg-4 col-form-label text-left">Room Name:</label>
+							<div className="col-lg-8">
+								<input
+									className="form-control form-control"
+									type="text"
+									value={this.state.rooms[this.state.selectedRoomIndex].roomName}
+									onChange={(e) => this.handleChangeRoomName(e, this.state.selectedRoomIndex)}
+								/>
+							</div>
+						</div>
+						<div className="form-group row">
+							<label className="col-lg-4 col-form-label text-left">Capacity:</label>
+							<div className="col-lg-8">
+								<input
+									className="form-control form-control"
+									type="number"
+									value={this.state.rooms[this.state.selectedRoomIndex].capacity}
+									onChange={(e) => this.handleChangeCapacity(e, this.state.selectedRoomIndex)}
+								/>
+							</div>
+						</div>
+						{roomResourceSelector}
+						<div className="form-group row">
+							<div className="col-lg-12">
+								<button type="button" className="btn btn-danger" onClick={() => this.handleDeleteRoom(this.state.selectedRoomIndex)}>
+									<span className=" oi oi-trash" />
+									<span>&nbsp;&nbsp;</span>
+									Delete Room
+						</button>
+							</div>
+						</div>
+						<hr />
+						<div className="row">
+							<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={this.handlePersistChanges}>
+								Submit Changes
+							</button>
+						</div>
+						<div className="form-group d-flex">
+							<div className="ml-auto" style={{ width: '120px !important' }} />
+						</div>
 					</div>
-					<hr />
 				</div>
-			);
+				<hr />
+			</div>
+		);
 	}
 
 	needsWork = () => { return true; };
@@ -312,6 +356,11 @@ export class ManageRooms extends React.Component<Props, State> {
 		if (!this.doValidityChecks())
 			return;
 
+		if (this.state.locations.length === 0) {
+			alert('There are currently no locations to choose from! Please add a location before adding rooms!');
+			return;
+		}
+
 		let newRoomCount = 0;
 
 		if (this.state.rooms.length !== 0)
@@ -345,7 +394,8 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	handleDeleteRoom = (index: number) => {
-		if (!confirm('Are you sure you want to delete this room?'))
+		if (!confirm('Are you sure you want to delete this room? Doing so will delete the room and all associated events! ' +
+			'This action cannot be reverted after clicking \'Submit Changes\'!'))
 			return;
 
 		let rooms = this.state.rooms.slice(0);
@@ -447,7 +497,6 @@ export class ManageRooms extends React.Component<Props, State> {
 
 			return selected;
 		});
-		console.log(unselectedResources);
 
 		if (room && unselectedResources.length > 0) {
 			let resource = unselectedResources[0];
@@ -510,50 +559,132 @@ export class ManageRooms extends React.Component<Props, State> {
 		});
 
 		getRoomsFromDB.then((dbRooms) => {
-			console.log(dbRooms);
 			let roomNamesToDelete = this.getRoomsNotInState(dbRooms);
-			// let locationsToCreateInDB = this.getLocationsNotInDB(dbLocations);
-			// let locationsNotCreatedInDB = this.filterIdenticalLocations(this.state.locations, locationsToCreateInDB);
-			// let locationsToUpdateInDB = this.filterIdenticalLocations(locationsNotCreatedInDB, dbLocations);
+			let roomsToCreateInDB = this.getRoomsNotInDB(dbRooms);
+			let roomsNotCreatedInDB = this.filterIdenticalRooms(this.state.rooms, roomsToCreateInDB);
+			let roomsToUpdateInDB = this.filterIdenticalRooms(roomsNotCreatedInDB, dbRooms);
 
 			console.log('To Delete: ');
 			console.log(roomNamesToDelete);
-			// console.log('To Create: ');
-			// console.log(locationsToCreateInDB);
-			// console.log('To Update: ');
-			// console.log(locationsToUpdateInDB);
+			console.log('To Create: ');
+			console.log(roomsToCreateInDB);
+			console.log('To Update: ');
+			console.log(roomsToUpdateInDB);
 
 			let persistToDBPromises = [
 				this.deleteRoomsFromDB(roomNamesToDelete),
-				// 	this.createLocationsInDB(locationsToCreateInDB),
-				// 	this.updateLocationsInDB(locationsToUpdateInDB)
+				// this.createRoomsInDB(roomsToCreateInDB),
+				// this.updateRoomsInDB(roomsToUpdateInDB)
 			];
 
-			// Promise.all(persistToDBPromises).then(() => {
-			// 	this.props.handleShowAlert('success', 'Successfully submitted data!');
-			// 	this.resetDBNames();
-			// }).catch(() => {
-			// 	this.props.handleShowAlert('error', 'Error submitting data.');
-			// });
+			Promise.all(persistToDBPromises).then(() => {
+				this.props.handleShowAlert('success', 'Successfully submitted data!');
+				this.resetDBNames();
+			}).catch(() => {
+				this.props.handleShowAlert('error', 'Error submitting data.');
+			});
 		}).catch(() => {
 			this.props.handleShowAlert('error', 'Error submitting data.');
 		});
 	}
 
-	getRoomsNotInState = (rooms: Room[]): { locationName: string, roomName: string }[] => {
+	getRoomsNotInState = (rooms: Room[]): Room[] => {
 		let roomsNotInState = rooms.filter(room => {
 			return !this.state.rooms.map(stateRoom => {
 				return stateRoom.dbLocationName + stateRoom.dbRoomName;
 			}).includes(room.dbLocationName + room.dbRoomName);
 		});
 
-		return roomsNotInState.map(room => {
-			return { locationName: room.locationName, roomName: room.roomName };
+		return roomsNotInState;
+	}
+
+	getRoomsNotInDB = (dbRooms: Room[]): Room[] => {
+		let roomsNotInDB = this.state.rooms.filter(stateRoom => {
+			return !dbRooms.map(dbRoom => {
+				return dbRoom.dbLocationName + dbRoom.dbRoomName;
+			}).includes(stateRoom.dbLocationName + stateRoom.dbRoomName);
+		});
+		return roomsNotInDB;
+	}
+
+	filterIdenticalRooms = (rooms: Room[], filterRooms: Room[]): Room[] => {
+		return rooms.filter(stateRoom => {
+			let isIdentical = false;
+			filterRooms.forEach(dbRoom => {
+				if (dbRoom.dbLocationName === stateRoom.dbLocationName &&
+					dbRoom.dbRoomName === stateRoom.dbRoomName &&
+					dbRoom.locationName === stateRoom.locationName &&
+					dbRoom.roomName === stateRoom.roomName &&
+					dbRoom.capacity === stateRoom.capacity &&
+					dbRoom.dbCapacity === stateRoom.dbCapacity)
+					if (this.compareResources(dbRoom.dbResources, stateRoom.dbResources) && this.compareResources(dbRoom.resources, stateRoom.resources))
+						isIdentical = true;
+			});
+
+			return !isIdentical;
 		});
 	}
-	// PICKUP HERE
-	deleteRoomsFromDB = (rooms: { locationName: string, roomName: string }[]) => {
+
+	compareResources = (dbRoomResources: Resource[], stateRoomResources: Resource[]): boolean => {
+		let resourcesAreTheSame = true;
+		let testSet = new Set();
+		dbRoomResources.forEach(dbRoomResource => {
+			testSet.add(dbRoomResource.name + dbRoomResource.count);
+		});
+		stateRoomResources.forEach(stateRoomResource => {
+			if (!testSet.has(stateRoomResource.name + stateRoomResource.count))
+				resourcesAreTheSame = false;
+		});
+		return resourcesAreTheSame;
+	}
+
+	deleteRoomsFromDB = (rooms: Room[]) => {
+		console.log(rooms);
+		return new Promise((resolve, reject) => {
+			if (rooms.length <= 0) {
+				resolve();
+				return;
+			}
+			let queryData: {}[] = [];
+			for (let i = 0; i < rooms.length; i++)
+				queryData.push({
+					where: {
+						LocationName: rooms[i].dbLocationName,
+						RoomName: rooms[i].dbRoomName
+					}
+				});
+
+			let queryDataString = JSON.stringify(queryData);
+			console.log(queryDataString);
+			request.delete('/api/rooms').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
+	}
+
+	createLocationsInDB = (locations: Location[]) => {
 		return true;
+	}
+
+	resetDBNames = () => {
+		let resetRooms: Room[] = this.state.rooms.map(room => {
+			return {
+				dbLocationName: room.locationName,
+				locationName: room.locationName,
+				dbRoomName: room.roomName,
+				roomName: room.roomName,
+				selectedLocationIndex: room.selectedLocationIndex,
+				dbCapacity: room.capacity,
+				capacity: room.capacity,
+				dbResources: room.resources,
+				resources: room.resources
+			};
+		});
+
+		this.setState({ rooms: resetRooms });
 	}
 
 	// TODO: Finish adding necessary checks
