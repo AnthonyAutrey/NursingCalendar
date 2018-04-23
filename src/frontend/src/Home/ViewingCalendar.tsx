@@ -384,13 +384,19 @@ export class ViewingCalendar extends React.Component<Props, State> {
 		let queryDataString: string = JSON.stringify(queryData);
 		request.get('/api/preferences/' + this.props.cwid).set('queryData', queryDataString).end((error: {}, res: any) => {
 			if (res && res.body)
-				if (res.body.length > 0)
+				if (res.body.length > 0) {
+					let eventSize = Number(res.body[0].EventSize);
+					if (eventSize < 19 || isNaN(eventSize))
+						eventSize = 19;
+					if (eventSize > 19 * 15)
+						eventSize = 19 * 15;
+
 					this.setState({
 						collapseEvents: res.body[0].CollapseEvents === 1 ? true : false,
 						eventDisplay: res.body[0].EventDisplay,
-						eventSize: res.body[0].EventSize
+						eventSize: eventSize
 					});
-				else {
+				} else {
 					// Didn't find preferences in DB for user, so create a default one
 					let putQueryData = JSON.stringify({
 						insertValues: {
@@ -410,16 +416,16 @@ export class ViewingCalendar extends React.Component<Props, State> {
 	}
 
 	handleEventSizeIncrease = () => {
-		if (this.state.eventSize < 19 * 15)
-			this.setState(prevState => ({ eventSize: prevState.eventSize + 19 }), () => {
-				this.persistEventSize(this.state.eventSize);
+		if (Number(this.state.eventSize) < 19 * 15)
+			this.setState(prevState => ({ eventSize: Number(prevState.eventSize) + 19 }), () => {
+				this.persistEventSize(Number(this.state.eventSize));
 			});
 	}
 
 	handleEventSizeDecrease = () => {
-		if (this.state.eventSize > 19)
-			this.setState(prevState => ({ eventSize: prevState.eventSize - 19 }), () => {
-				this.persistEventSize(this.state.eventSize);
+		if (Number(this.state.eventSize) > 19)
+			this.setState(prevState => ({ eventSize: Number(prevState.eventSize) - 19 }), () => {
+				this.persistEventSize(Number(this.state.eventSize));
 			});
 	}
 
