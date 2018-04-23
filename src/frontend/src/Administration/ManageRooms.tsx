@@ -591,16 +591,21 @@ export class ManageRooms extends React.Component<Props, State> {
 			];
 
 			Promise.all(persistToDBPromises).then(() => {
+				let addRelationPromises = [];
+
 				if (roomsToCreateInDB.length > 0)
-					this.addRoomResourceRelations(roomsToCreateInDB).then(() => {
-						this.props.handleShowAlert('success', 'Successfully submitted data!');
-					}).catch(() => { this.props.handleShowAlert('error', 'Error submitting data.'); });
+					addRelationPromises.push(this.addRoomResourceRelations(roomsToCreateInDB));
+
 				if (roomsToUpdateInDB.length > 0)
-					this.updateRoomResourceRelations(roomsToUpdateInDB).then(() => {
-						this.props.handleShowAlert('success', 'Successfully submitted data!');
-					});
-				this.props.handleShowAlert('success', 'Successfully submitted data!');
-				this.resetDBNames();
+					addRelationPromises.push(this.updateRoomResourceRelations(roomsToUpdateInDB));
+
+				Promise.all(addRelationPromises).then(() => {
+					this.props.handleShowAlert('success', 'Successfully submitted data!');
+					this.resetDBNames();
+					location.reload();
+				}).catch(() => {
+					this.props.handleShowAlert('error', 'Error submitting data.');
+				});
 			}).catch(() => {
 				this.props.handleShowAlert('error', 'Error submitting data.');
 			});

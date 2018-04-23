@@ -114,7 +114,7 @@ $app->put('/roomresources', function (Request $request, Response $response, arra
 // Read //
 $app->get('/roomresources', function (Request $request, Response $response, array $args) {
 	$queryData = getSelectQueryData($request);
-	$queryString = DBUtil::buildSelectQuery('RoomResourceRelation', $queryData['fields'], $queryData['where']);
+	$queryString = DBUtil::buildSelectQuery('RoomResourceRelation NATURAL left join Resources', $queryData['fields'], $queryData['where']);
 	$roomResources = DBUtil::runQuery($queryString);
 	$response->getBody()->write($roomResources);
 	$response = $response->withHeader('Content-type', 'application/json');
