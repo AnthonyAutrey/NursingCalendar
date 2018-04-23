@@ -12,7 +12,9 @@ export interface Room {
 	capacity: number;
 	dbCapacity: number;
 	resources: Resource[];
+	resourcesLength: number;
 	dbResources: Resource[];
+	dbResourcesLength: number;
 }
 
 export interface Resource {
@@ -33,7 +35,7 @@ interface State {
 	initialized: boolean;
 	focusOnResourceCount: boolean;
 }
-// TODO: Finish adding functionality to this class
+
 export class ManageRooms extends React.Component<Props, State> {
 	constructor(props: Props, state: State) {
 		super(props, state);
@@ -290,12 +292,17 @@ export class ManageRooms extends React.Component<Props, State> {
 					capacity: dbRoom.Capacity,
 					dbCapacity: dbRoom.Capacity,
 					resources: resources,
-					dbResources: resources
+					resourcesLength: resources.length,
+					dbResources: resources,
+					dbResourcesLength: resources.length
 				};
 				parsedRooms.push(room);
 				parsedRoomIndex++;
 			} else
-				parsedRooms[parsedRoomIndex].resources.push({ name: dbRoom.ResourceName, isEnumerable: dbRoom.IsEnumerable });
+				if (dbRoom.Count)
+					parsedRooms[parsedRoomIndex].resources.push({ name: dbRoom.ResourceName, count: dbRoom.Count, isEnumerable: true });
+				else
+					parsedRooms[parsedRoomIndex].resources.push({ name: dbRoom.ResourceName, isEnumerable: false });
 
 			roomlocationSet.add(dbRoomName + dbLocationName);
 		});
@@ -390,7 +397,9 @@ export class ManageRooms extends React.Component<Props, State> {
 			capacity: 0,
 			dbCapacity: 0,
 			resources: [],
-			dbResources: []
+			resourcesLength: 0,
+			dbResources: [],
+			dbResourcesLength: 0
 		};
 
 		let rooms = this.state.rooms.slice(0);
@@ -512,6 +521,7 @@ export class ManageRooms extends React.Component<Props, State> {
 			if (resource.isEnumerable)
 				resource.count = 0;
 			room.resources.push(resource);
+			room.resourcesLength++;
 			rooms[this.state.selectedRoomIndex] = room;
 			this.setState({ rooms: rooms });
 		}
@@ -522,6 +532,7 @@ export class ManageRooms extends React.Component<Props, State> {
 		let rooms = this.state.rooms;
 		if (room) {
 			room.resources.splice(index, 1);
+			room.resourcesLength--;
 			rooms[this.state.selectedRoomIndex] = room;
 			this.setState({ rooms: rooms });
 		}
@@ -586,18 +597,15 @@ export class ManageRooms extends React.Component<Props, State> {
 				this.updateRoomsInDB(roomsToUpdateInDB)
 			];
 
-			// TODO: decide on a proper way to update resource relations
 			Promise.all(persistToDBPromises).then(() => {
 				if (roomsToCreateInDB.length > 0)
 					this.addRoomResourceRelations(roomsToCreateInDB).then(() => {
-						// if (roomsToUpdateInDB.length > 0)
-						// 	this.updateRoomResourceRelations(roomsToUpdateInDB).then(() => {
-						// 		this.props.handleShowAlert('success', 'Successfully submitted data!');
-						// 		this.resetDBNames();
-						// 	});
 						this.props.handleShowAlert('success', 'Successfully submitted data!');
-						this.resetDBNames();
 					}).catch(() => { this.props.handleShowAlert('error', 'Error submitting data.'); });
+				if (roomsToUpdateInDB.length > 0)
+					this.updateRoomResourceRelations(roomsToUpdateInDB).then(() => {
+						this.props.handleShowAlert('success', 'Successfully submitted data!');
+					});
 				this.props.handleShowAlert('success', 'Successfully submitted data!');
 				this.resetDBNames();
 			}).catch(() => {
@@ -636,7 +644,9 @@ export class ManageRooms extends React.Component<Props, State> {
 					dbRoom.locationName === stateRoom.locationName &&
 					dbRoom.roomName === stateRoom.roomName &&
 					dbRoom.capacity === stateRoom.capacity &&
-					dbRoom.dbCapacity === stateRoom.dbCapacity)
+					dbRoom.dbCapacity === stateRoom.dbCapacity &&
+					dbRoom.resourcesLength === stateRoom.resourcesLength &&
+					dbRoom.dbResourcesLength === stateRoom.resourcesLength)
 					if (this.compareResources(dbRoom.dbResources, stateRoom.dbResources) && this.compareResources(dbRoom.resources, stateRoom.resources))
 						isIdentical = true;
 			});
@@ -652,8 +662,10 @@ export class ManageRooms extends React.Component<Props, State> {
 			testSet.add(dbRoomResource.name + dbRoomResource.count);
 		});
 		stateRoomResources.forEach(stateRoomResource => {
-			if (!testSet.has(stateRoomResource.name + stateRoomResource.count))
+			let stateRoomResourceCount: string = '' + stateRoomResource.count;
+			if (!testSet.has(stateRoomResource.name + stateRoomResourceCount)) {
 				resourcesAreTheSame = false;
+			}
 		});
 		return resourcesAreTheSame;
 	}
@@ -684,7 +696,6 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	createRoomsInDB = (rooms: Room[]) => {
-		console.log(rooms);
 		return new Promise((resolve, reject) => {
 			if (rooms.length <= 0) {
 				resolve();
@@ -702,7 +713,6 @@ export class ManageRooms extends React.Component<Props, State> {
 				});
 
 			let queryDataString = JSON.stringify(queryData);
-			console.log(queryDataString);
 			request.put('/api/rooms').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (res && res.body)
 					resolve();
@@ -755,7 +765,9 @@ export class ManageRooms extends React.Component<Props, State> {
 				dbCapacity: room.capacity,
 				capacity: room.capacity,
 				dbResources: room.resources,
-				resources: room.resources
+				dbResourcesLength: room.resources.length,
+				resources: room.resources,
+				resourcesLength: room.resources.length
 			};
 		});
 
@@ -793,37 +805,87 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	updateRoomResourceRelations = (rooms: Room[]) => {
-		console.log(rooms);
-		// return new Promise((resolve, reject) => {
-		// 	if (rooms.length <= 0) {
-		// 		resolve();
-		// 		return;
-		// 	}
+		return new Promise((resolve, reject) => {
+			if (rooms.length <= 0) {
+				resolve();
+				return;
+			}
 
-		// 	let queryData: {}[] = [];
+			let queryData: {}[] = [];
 
-		// 	for (let i = 0; i < rooms.length; i++)
-		// 		for (let j = 0; j < rooms[i].resources.length; j++)
-		// 			queryData.push({
-		// 				insertValues: {
-		// 					'LocationName': rooms[i].locationName,
-		// 					'RoomName': rooms[i].roomName,
-		// 					'ResourceName': rooms[i].resources[j].name,
-		// 					'Count': rooms[i].resources[j].count
-		// 				}
-		// 			});
+			for (let i = 0; i < rooms.length; i++)
+				queryData.push({
+					where: {
+						'LocationName': rooms[i].locationName,
+						'RoomName': rooms[i].roomName
+					}
+				});
 
-		// 	let queryDataString = JSON.stringify(queryData);
-		// 	request.put('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
-		// 		if (res && res.body)
-		// 			resolve();
-		// 		else
-		// 			reject();
-		// 	});
-		// });
+			let queryDataString = JSON.stringify(queryData);
+			request.delete('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		}).then(() => {
+			return new Promise((resolve, reject) => {
+				if (rooms.length <= 0) {
+					resolve();
+					return;
+				}
+
+				let queryData: {}[] = [];
+
+				for (let i = 0; i < rooms.length; i++)
+					for (let j = 0; j < rooms[i].resources.length; j++)
+						queryData.push({
+							insertValues: {
+								'LocationName': rooms[i].locationName,
+								'RoomName': rooms[i].roomName,
+								'ResourceName': rooms[i].resources[j].name,
+								'Count': rooms[i].resources[j].count
+							}
+						});
+
+				let queryDataString = JSON.stringify(queryData);
+				request.put('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body)
+						resolve();
+					else
+						reject();
+				});
+			});
+		});
 	}
 
-	// TODO: Finish adding necessary checks
+	deleteRoomResourceRelations = (rooms: Room[]) => {
+		return new Promise((resolve, reject) => {
+			if (rooms.length <= 0) {
+				resolve();
+				return;
+			}
+
+			let queryData: {}[] = [];
+
+			for (let i = 0; i < rooms.length; i++)
+				queryData.push({
+					where: {
+						'LocationName': rooms[i].locationName,
+						'RoomName': rooms[i].roomName
+					}
+				});
+
+			let queryDataString = JSON.stringify(queryData);
+			request.delete('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
+	}
+
 	doValidityChecks(): boolean {
 		if (this.state.rooms.length === 0)
 			return true;
@@ -834,6 +896,16 @@ export class ManageRooms extends React.Component<Props, State> {
 		}
 		if (this.roomNameIsEmpty()) {
 			alert('The current room name is empty. Please enter a valid room name before continuing.');
+			return false;
+		}
+
+		if (this.roomHasNegativeCapacity()) {
+			alert('The current room has an invalid capacity. Please enter a positive integer for capacity before continuing.');
+			return false;
+		}
+
+		if (this.roomHasAtLeastOneResourceWithNegativeCount()) {
+			alert('The current room has a resource with an invalid count. Please enter a positive integer for count before continuing.');
 			return false;
 		}
 
@@ -855,6 +927,22 @@ export class ManageRooms extends React.Component<Props, State> {
 	roomNameIsEmpty = (): boolean => {
 		let selectedRoom: Room = this.getSelectedRoom();
 		return selectedRoom.roomName === '';
+	}
+
+	roomHasNegativeCapacity = (): boolean => {
+		let selectedRoom: Room = this.getSelectedRoom();
+		return selectedRoom.capacity < 0;
+	}
+
+	roomHasAtLeastOneResourceWithNegativeCount = (): boolean => {
+		let selectedRoom: Room = this.getSelectedRoom();
+		let invalid = false;
+		selectedRoom.resources.forEach(resource => {
+			if (resource.isEnumerable && resource.count)
+				if (resource.count < 0)
+					invalid = true;
+		});
+		return invalid;
 	}
 
 	getSelectedRoom = () => {
