@@ -14,9 +14,16 @@ interface Props {
 	focusOnResourceCount: boolean;
 }
 
-export class RoomResource extends React.Component<Props, {}> {
-	constructor(props: Props, state: {}) {
+interface State {
+	resourceCount: number;
+}
+
+export class RoomResource extends React.Component<Props, State> {
+	constructor(props: Props, state: State) {
 		super(props, state);
+		this.state = {
+			resourceCount: this.props.selectedResource.count || 0
+		};
 	}
 
 	render() {
@@ -54,18 +61,24 @@ export class RoomResource extends React.Component<Props, {}> {
 						</select>
 						<input
 							className="form-control ml-2"
+							key={uuid()}
 							style={{ width: 90 }}
 							type="text"
-							value={this.props.selectedResource.count}
-							autoFocus={this.props.focusOnResourceCount}
-							onBlur={() => this.props.handleCountFocusOut()}
-							onFocus={(e) => { this.props.handleCountFocusIn(); this.moveCaretAtEnd(e); }}
-							onChange={(event) => this.props.handleChangeResourceCount(event, this.props.index)}
+							value={this.state.resourceCount}
+							// autoFocus={this.props.focusOnResourceCount}
+							// onBlur={() => this.props.handleCountFocusOut()}
+							// onFocus={(e) => { this.props.handleCountFocusIn(this.props.index); this.moveCaretAtEnd(e); }}
+							onBlur={() => this.props.handleChangeResourceCount(this.state.resourceCount, this.props.index)}
+							onChange={(event) => this.handleCountChange(event)}
 						/>
 						<button className="btn btn-danger ml-2" onClick={() => this.props.handleDelete(this.props.index)}>&#10006;</button>
 					</div>
 				</div>
 			);
+	}
+
+	handleCountChange = (event: any) => {
+		this.setState({ resourceCount: Number(event.target.value) });
 	}
 
 	moveCaretAtEnd(e: any) {

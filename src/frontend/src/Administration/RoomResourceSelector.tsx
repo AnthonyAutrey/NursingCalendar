@@ -12,7 +12,7 @@ interface Props {
 	handleDeleteResource: Function;
 	handleCountFocusIn: Function;
 	handleCountFocusOut: Function;
-	focusOnResourceCount: boolean;
+	resourceFocusIndex: number;
 }
 
 export class RoomResourceSelector extends React.Component<Props, {}> {
@@ -52,7 +52,7 @@ export class RoomResourceSelector extends React.Component<Props, {}> {
 					handleDelete={this.props.handleDeleteResource}
 					handleCountFocusIn={this.props.handleCountFocusIn}
 					handleCountFocusOut={this.props.handleCountFocusOut}
-					focusOnResourceCount={this.props.focusOnResourceCount}
+					focusOnResourceCount={(this.props.resourceFocusIndex === index)}
 				/>
 			);
 		});

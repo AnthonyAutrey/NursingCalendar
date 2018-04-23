@@ -33,7 +33,7 @@ interface State {
 	locations: string[];
 	resources: Resource[];
 	initialized: boolean;
-	focusOnResourceCount: boolean;
+	resourceFocusIndex: number;
 }
 
 export class ManageRooms extends React.Component<Props, State> {
@@ -45,7 +45,7 @@ export class ManageRooms extends React.Component<Props, State> {
 			locations: [],
 			resources: [],
 			initialized: false,
-			focusOnResourceCount: false
+			resourceFocusIndex: -1
 		};
 	}
 
@@ -154,13 +154,14 @@ export class ManageRooms extends React.Component<Props, State> {
 
 		let roomResourceSelector = (
 			<RoomResourceSelector
+				key={uuid()}
 				room={this.state.rooms[this.state.selectedRoomIndex]}
 				allPossibleResources={this.state.resources}
 				handleChangeResource={this.handleChangeResource}
 				handleChangeResourceCount={this.handleChangeResourceCount}
 				handleCountFocusIn={this.handleResourceCountFocusIn}
 				handleCountFocusOut={this.handleResourceCountFocusOut}
-				focusOnResourceCount={this.state.focusOnResourceCount}
+				resourceFocusIndex={this.state.resourceFocusIndex}
 				handleAddResource={this.handleAddResource}
 				handleDeleteResource={this.handleDeleteResource}
 			/>);
@@ -487,9 +488,7 @@ export class ManageRooms extends React.Component<Props, State> {
 		}
 	}
 
-	handleChangeResourceCount = (event: any, index: number) => {
-		let resourceCount = Number(event.target.value);
-
+	handleChangeResourceCount = (resourceCount: number, index: number) => {
 		let room: Room = this.state.rooms[this.state.selectedRoomIndex];
 		let selectedResource = room.resources[index];
 		let rooms = this.state.rooms;
@@ -899,12 +898,12 @@ export class ManageRooms extends React.Component<Props, State> {
 			return false;
 		}
 
-		if (this.roomHasNegativeCapacity()) {
+		if (this.roomHasInvalidCapacity()) {
 			alert('The current room has an invalid capacity. Please enter a positive integer for capacity before continuing.');
 			return false;
 		}
 
-		if (this.roomHasAtLeastOneResourceWithNegativeCount()) {
+		if (this.roomHasAResourceWithInvalidCount()) {
 			alert('The current room has a resource with an invalid count. Please enter a positive integer for count before continuing.');
 			return false;
 		}
@@ -929,17 +928,17 @@ export class ManageRooms extends React.Component<Props, State> {
 		return selectedRoom.roomName === '';
 	}
 
-	roomHasNegativeCapacity = (): boolean => {
+	roomHasInvalidCapacity = (): boolean => {
 		let selectedRoom: Room = this.getSelectedRoom();
-		return selectedRoom.capacity < 0;
+		return (selectedRoom.capacity < 0 || !Number.isInteger(selectedRoom.capacity));
 	}
 
-	roomHasAtLeastOneResourceWithNegativeCount = (): boolean => {
+	roomHasAResourceWithInvalidCount = (): boolean => {
 		let selectedRoom: Room = this.getSelectedRoom();
 		let invalid = false;
 		selectedRoom.resources.forEach(resource => {
 			if (resource.isEnumerable && resource.count)
-				if (resource.count < 0)
+				if (resource.count < 0 || !Number.isInteger(resource.count))
 					invalid = true;
 		});
 		return invalid;
@@ -950,13 +949,11 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	// Resource Count Focus ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	handleResourceCountFocusIn = () => {
-		if (!this.state.focusOnResourceCount)
-			this.setState({ focusOnResourceCount: true });
+	handleResourceCountFocusIn = (index: number) => {
+		this.setState({ resourceFocusIndex: index });
 	}
 	handleResourceCountFocusOut = () => {
-		if (this.state.focusOnResourceCount)
-			this.setState({ focusOnResourceCount: false });
+		this.setState({ resourceFocusIndex: -1 });
 	}
 }
 
