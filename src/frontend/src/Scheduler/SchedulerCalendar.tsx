@@ -82,7 +82,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	componentWillMount() {
-		this.getStateFromDB();
+		this.getStateFromDB(this.props.room, this.props.location);
 		let route = '/api/groups';
 		if (this.props.role === 'instructor') {
 			route = '/api/usergroups/' + this.props.cwid;
@@ -509,8 +509,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				recurringEvent.start += '.000Z';
 			if (recurringEvent.end.length < 20)
 				recurringEvent.end += '.000Z';
-			let recurringEventStart = moment(recurringEvent.start).utc().add(1, 'milliseconds');
-			let recurringEventEnd = moment(recurringEvent.end).utc().add(-1, 'milliseconds');
+			let recurringEventStart = moment(recurringEvent.start).utc().add(15, 'minutes');
+			let recurringEventEnd = moment(recurringEvent.end).utc().add(-15, 'minutes');
 			let iterateDate = recurringEventStart.clone();
 
 			let noConflicts = true;
@@ -521,8 +521,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 				iterateDate.add(15, 'minutes');
 			}
-			if (timeSet.has(recurringEventEnd.toISOString()))
-				noConflicts = false;
 
 			if (!noConflicts)
 				conflictingEvents.push(recurringEvent);
@@ -870,7 +868,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	// Client Events //////////////////////////////////////////////////////////////////////////////////////////////
 	public getStateFromDB(room: string = this.props.room, location: string = this.props.location): void {
 		this.setState({ loading: true });
-		Promise.all([this.getEventsFromDB(), this.getPublishDatesFromAPI()]).then((data) => {
+		Promise.all([this.getEventsFromDB(room, location), this.getPublishDatesFromAPI()]).then((data) => {
 			let events: Map<number, Event> = data[0];
 			let publishdates: { start: string, end: string, locked: boolean } = data[1];
 			let publishStart = publishdates.locked ? moment(publishdates.start).utc(true) : moment('08-05-1985');
@@ -887,7 +885,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		});
 	}
 
-	getEventsFromDB = (room: string = this.props.room, location: string = this.props.location): Promise<Map<number, Event>> => {
+	getEventsFromDB = (room: string, location: string): Promise<Map<number, Event>> => {
 		return new Promise((resolved, reject) => {
 			let queryData: {} = {
 				where: {
@@ -899,6 +897,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (res && res.body) {
 					let events = this.parseDBEvents(res.body);
+
 					request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
 						if (recRes && recRes.body) {
 							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
@@ -1133,6 +1132,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				let persistNewEventsThenRecurringEvents = new Promise((res, rej) => {
 					let eventsNotInDB = this.getClientEventsNotYetInDB(eventIDsInDB);
 
+					console.log('events not yet in DB!!-------------------------------');
+					console.log(eventsNotInDB);
+
 					this.persistNewEventsToDB(eventsNotInDB).then(() => {
 						this.persistRecurringEvents().then(() => {
 							res();
@@ -1172,23 +1174,62 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		return new Promise((resolved, reject) => {
 			let ids: number[] = Array.from(this.state.events.keys());
 
-			let queryData = {
-				fields: ['EventID'], where: {
-					EventID: ids,
-					LocationName: this.props.location,
-					RoomName: this.props.room
-				}
-			};
-			let queryDataString = JSON.stringify(queryData);
-			let stateEventsThatAreAlreadyInDB: number[] = [];
-			request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-				if (res && res.body)
-					resolved(this.getEventIdsFromResponseBody(res.body));
-				else {
-					console.log('getClientEventIDsThatAreAlreadyInDB failed');
-					reject();
-				}
+			let promises = [];
+			while (ids.length > 0) {
+				let idPart = ids.slice(0, 500);
+				ids.splice(0, 500);
+
+				let queryData = {
+					fields: ['EventID'], where: {
+						EventID: idPart,
+						LocationName: this.props.location,
+						RoomName: this.props.room
+					}
+				};
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryData);
+					console.log('calling get client event ids');
+					request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+						if (res && res.body)
+							resAPI(this.getEventIdsFromResponseBody(res.body));
+						else {
+							console.log('getClientEventIDsThatAreAlreadyInDB new Thing failed rejapi');
+							rejAPI();
+						}
+					});
+				}));
+			}
+
+			Promise.all(promises).then((data) => {
+				let eventIDsThatAreAlreadyInDB: number[] = [];
+				data.forEach((datum: number[]) => {
+					eventIDsThatAreAlreadyInDB = eventIDsThatAreAlreadyInDB.concat(datum);
+				});
+				console.log('Finished Getting eventids already in DB.................................');
+				console.log(eventIDsThatAreAlreadyInDB);
+				resolved(eventIDsThatAreAlreadyInDB);
+			}).catch(() => {
+				console.log('getClientEventIDsThatAreAlreadyInDB failed bottom catch');
+				reject();
 			});
+
+			// let queryData = {
+			// 	fields: ['EventID'], where: {
+			// 		EventID: ids,
+			// 		LocationName: this.props.location,
+			// 		RoomName: this.props.room
+			// 	}
+			// };
+			// let queryDataString = JSON.stringify(queryData);
+			// let stateEventsThatAreAlreadyInDB: number[] = [];
+			// request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+			// 	if (res && res.body)
+			// 		resolved(this.getEventIdsFromResponseBody(res.body));
+			// 	else {
+			// 		console.log('getClientEventIDsThatAreAlreadyInDB failed');
+			// 		reject();
+			// 	}
+			// });
 		});
 	}
 

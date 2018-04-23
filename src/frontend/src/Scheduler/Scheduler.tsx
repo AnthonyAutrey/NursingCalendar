@@ -107,6 +107,9 @@ export class Scheduler extends React.Component<Props, State> {
 		let selectedRoomName = this.lastSelectedRoom.roomName;
 		let selectedLocationName = this.lastSelectedRoom.locationName;
 
+		console.log('going to: ');
+		console.log(selectedRoomName);
+
 		return (
 			<div>
 				<div className="Scheduler container-fluid">
@@ -175,8 +178,7 @@ export class Scheduler extends React.Component<Props, State> {
 				let rooms: any[] = res.body;
 				let parsedRooms = this.parseRoomsFromDB(rooms);
 				this.allRooms = parsedRooms;
-				if (this.allRooms.length > 0)
-					this.lastSelectedRoom = this.allRooms[0];
+				this.lastSelectedRoom = this.allRooms[0];
 				this.setState({ rooms: parsedRooms, initialized: true });
 			}
 		});
