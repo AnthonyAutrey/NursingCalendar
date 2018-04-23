@@ -279,6 +279,8 @@ export class ManageRooms extends React.Component<Props, State> {
 					else
 						resources.push({ name: dbRoom.ResourceName, isEnumerable: false });
 
+				if (!dbRoom.Capacity)
+					dbRoom.Capacity = 0;
 				let room: Room = {
 					locationName: dbRoom.LocationName,
 					dbLocationName: dbRoom.LocationName,
@@ -584,7 +586,18 @@ export class ManageRooms extends React.Component<Props, State> {
 				this.updateRoomsInDB(roomsToUpdateInDB)
 			];
 
+			// TODO: decide on a proper way to update resource relations
 			Promise.all(persistToDBPromises).then(() => {
+				if (roomsToCreateInDB.length > 0)
+					this.addRoomResourceRelations(roomsToCreateInDB).then(() => {
+						// if (roomsToUpdateInDB.length > 0)
+						// 	this.updateRoomResourceRelations(roomsToUpdateInDB).then(() => {
+						// 		this.props.handleShowAlert('success', 'Successfully submitted data!');
+						// 		this.resetDBNames();
+						// 	});
+						this.props.handleShowAlert('success', 'Successfully submitted data!');
+						this.resetDBNames();
+					}).catch(() => { this.props.handleShowAlert('error', 'Error submitting data.'); });
 				this.props.handleShowAlert('success', 'Successfully submitted data!');
 				this.resetDBNames();
 			}).catch(() => {
@@ -749,9 +762,65 @@ export class ManageRooms extends React.Component<Props, State> {
 		this.setState({ rooms: resetRooms });
 	}
 
-	// TODO: make sure this works and make sure that any time we create or update we also set relations
-	setRoomResourceRelations = (rooms: Room[]) => {
-		return true;
+	addRoomResourceRelations = (rooms: Room[]) => {
+		return new Promise((resolve, reject) => {
+			if (rooms.length <= 0) {
+				resolve();
+				return;
+			}
+
+			let queryData: {}[] = [];
+
+			for (let i = 0; i < rooms.length; i++)
+				for (let j = 0; j < rooms[i].resources.length; j++)
+					queryData.push({
+						insertValues: {
+							'LocationName': rooms[i].locationName,
+							'RoomName': rooms[i].roomName,
+							'ResourceName': rooms[i].resources[j].name,
+							'Count': rooms[i].resources[j].count
+						}
+					});
+
+			let queryDataString = JSON.stringify(queryData);
+			request.put('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
+	}
+
+	updateRoomResourceRelations = (rooms: Room[]) => {
+		console.log(rooms);
+		// return new Promise((resolve, reject) => {
+		// 	if (rooms.length <= 0) {
+		// 		resolve();
+		// 		return;
+		// 	}
+
+		// 	let queryData: {}[] = [];
+
+		// 	for (let i = 0; i < rooms.length; i++)
+		// 		for (let j = 0; j < rooms[i].resources.length; j++)
+		// 			queryData.push({
+		// 				insertValues: {
+		// 					'LocationName': rooms[i].locationName,
+		// 					'RoomName': rooms[i].roomName,
+		// 					'ResourceName': rooms[i].resources[j].name,
+		// 					'Count': rooms[i].resources[j].count
+		// 				}
+		// 			});
+
+		// 	let queryDataString = JSON.stringify(queryData);
+		// 	request.put('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
+		// 		if (res && res.body)
+		// 			resolve();
+		// 		else
+		// 			reject();
+		// 	});
+		// });
 	}
 
 	// TODO: Finish adding necessary checks

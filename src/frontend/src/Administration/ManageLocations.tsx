@@ -42,13 +42,11 @@ export class ManageLocations extends React.Component<Props, State> {
 					<hr />
 					<div className="w-100 px-5">
 						<div className="card-body">
-							<div className="row">
-								<h4 className="card-title">Manage Locations</h4>
-								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
-									Add Location &nbsp;&nbsp;
-								<span className="plusIcon oi oi-size-sm oi-plus" />
-								</button>
-							</div>
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Locations</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddLocation}>
+								Add Location &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
+							</button>
 							<hr />
 						</div>
 					</div>
@@ -70,13 +68,11 @@ export class ManageLocations extends React.Component<Props, State> {
 					<hr />
 					<div className="w-100 px-5">
 						<div className="card-body">
-							<div className="row">
-								<h4 className="card-title">Manage Locations</h4>
-								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
-									Add Location &nbsp;&nbsp;
-									<span className="plusIcon oi oi-size-sm oi-plus" />
-								</button>
-							</div>
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Locations</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddLocation}>
+								Add Location &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
+							</button>
 							<hr />
 							<div className="form-group row">
 								<label className="col-lg-4 col-form-label text-left">Location:</label>
