@@ -216,7 +216,7 @@ export class ManageRooms extends React.Component<Props, State> {
 								<input
 									className="form-control form-control"
 									type="number"
-									value={this.state.rooms[this.state.selectedRoomIndex].capacity}
+									value={this.state.rooms[this.state.selectedRoomIndex].capacity || 0}
 									onChange={(e) => this.handleChangeCapacity(e, this.state.selectedRoomIndex)}
 								/>
 							</div>
@@ -379,7 +379,6 @@ export class ManageRooms extends React.Component<Props, State> {
 				newRoomCount++;
 		});
 
-		// TODO: Handle the location selection on this new room effectively.
 		let newRoom: Room = {
 			locationName: this.state.locations[0],
 			dbLocationName: this.state.locations[0],
@@ -581,8 +580,8 @@ export class ManageRooms extends React.Component<Props, State> {
 
 			let persistToDBPromises = [
 				this.deleteRoomsFromDB(roomNamesToDelete),
-				// this.createRoomsInDB(roomsToCreateInDB),
-				// this.updateRoomsInDB(roomsToUpdateInDB)
+				this.createRoomsInDB(roomsToCreateInDB),
+				this.updateRoomsInDB(roomsToUpdateInDB)
 			];
 
 			Promise.all(persistToDBPromises).then(() => {
@@ -647,7 +646,6 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	deleteRoomsFromDB = (rooms: Room[]) => {
-		console.log(rooms);
 		return new Promise((resolve, reject) => {
 			if (rooms.length <= 0) {
 				resolve();
@@ -663,7 +661,6 @@ export class ManageRooms extends React.Component<Props, State> {
 				});
 
 			let queryDataString = JSON.stringify(queryData);
-			console.log(queryDataString);
 			request.delete('/api/rooms').set('queryData', queryDataString).end((error: {}, res: any) => {
 				if (res && res.body)
 					resolve();
@@ -674,7 +671,64 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	createRoomsInDB = (rooms: Room[]) => {
-		return true;
+		console.log(rooms);
+		return new Promise((resolve, reject) => {
+			if (rooms.length <= 0) {
+				resolve();
+				return;
+			}
+
+			let queryData: {}[] = [];
+			for (let i = 0; i < rooms.length; i++)
+				queryData.push({
+					insertValues: {
+						'RoomName': rooms[i].roomName,
+						'Capacity': rooms[i].capacity,
+						'LocationName': rooms[i].locationName
+					}
+				});
+
+			let queryDataString = JSON.stringify(queryData);
+			console.log(queryDataString);
+			request.put('/api/rooms').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
+	}
+
+	updateRoomsInDB = (rooms: Room[]) => {
+		return new Promise((resolve, reject) => {
+			if (rooms.length <= 0) {
+				resolve();
+				return;
+			}
+
+			let queryData: {}[] = [];
+
+			for (let i = 0; i < rooms.length; i++)
+				queryData.push({
+					setValues: {
+						LocationName: rooms[i].locationName,
+						RoomName: rooms[i].roomName,
+						Capacity: rooms[i].capacity
+					},
+					where: {
+						LocationName: rooms[i].dbLocationName,
+						RoomName: rooms[i].dbRoomName
+					}
+				});
+
+			let queryDataString = JSON.stringify(queryData);
+			request.post('/api/rooms').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve();
+				else
+					reject();
+			});
+		});
 	}
 
 	resetDBNames = () => {
@@ -693,6 +747,11 @@ export class ManageRooms extends React.Component<Props, State> {
 		});
 
 		this.setState({ rooms: resetRooms });
+	}
+
+	// TODO: make sure this works and make sure that any time we create or update we also set relations
+	setRoomResourceRelations = (rooms: Room[]) => {
+		return true;
 	}
 
 	// TODO: Finish adding necessary checks
