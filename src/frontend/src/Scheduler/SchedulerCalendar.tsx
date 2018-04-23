@@ -900,7 +900,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 					request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
 						if (recRes && recRes.body) {
+							console.log(recRes.body);
 							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
+							console.log(eventsWithRecurringInfo);
 							this.eventCache = eventsWithRecurringInfo;
 							resolved(eventsWithRecurringInfo);
 						} else
@@ -935,7 +937,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				endDate: moment(dbRecurringInfo.EndDate)
 			};
 
-			let event = events.get(Number(dbRecurringInfo.EventID));
+			let event = events.get(dbRecurringInfo.EventID);
 			if (event) {
 				event.recurringInfo = recurringInfo;
 				events.set(event.id, event);
@@ -1439,6 +1441,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
+					console.log('put events');
 					request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body)
 							resAPI();
