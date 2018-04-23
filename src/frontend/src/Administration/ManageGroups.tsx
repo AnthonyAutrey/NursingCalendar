@@ -269,6 +269,7 @@ export class ManageGroups extends React.Component<Props, State> {
 			Promise.all(persistToDBPromises).then(() => {
 				this.props.handleShowAlert('success', 'Successfully submitted data!');
 				this.resetDBNames();
+				location.reload();
 			}).catch(() => {
 				this.props.handleShowAlert('error', 'Error submitting data.');
 			});
