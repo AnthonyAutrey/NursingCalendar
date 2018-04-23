@@ -26,7 +26,10 @@ export class Login extends React.Component<Props, State> {
 		return (
 			<div className="continer">
 				<div className="bg-light text-center mb-4 pb-4 pt-3 garamond ulm-red border-bottom">
-					<h5 className="display-4">ULM Nursing Schedule</h5>
+					<div className="d-flex flex-wrap justify-content-center align-items-center">
+						<img src="../../ulm-academic-logo-circle.png" alt="logo" style={{ maxWidth: 110 }} />
+						<h5 className="display-4 ml-4">ULM Nursing Schedule</h5>
+					</div>
 				</div>
 				<div className="col-xl-4 offset-xl-4 col-lg-6 offset-lg-3">
 					<div className="card w-100">
@@ -56,7 +59,7 @@ export class Login extends React.Component<Props, State> {
 								<div className="row">
 									<button tabIndex={3} type="submit" className="btn btn-primary btn-block mx-2 mt-2">
 										Submit
-									<span className="ml-2 oi oi-account-login" style={{ top: 1 }} />
+										<span className="ml-2 oi oi-account-login" style={{ top: 1 }} />
 									</button>
 								</div>
 							</form>
@@ -85,8 +88,8 @@ export class Login extends React.Component<Props, State> {
 		let queryDataString = JSON.stringify(queryData);
 
 		request.post('/api/login').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (res && res.body && res.body.authenticated)
-				this.props.handleLogin();
+			if (res && res.body && res.body.authenticated && res.body.cwid && res.body.role && res.body.firstName && res.body.lastName)
+				this.props.handleLogin(res.body.cwid, res.body.role, res.body.firstName, res.body.lastName);
 			else
 				this.setState({ failedAuthentication: true });
 		});

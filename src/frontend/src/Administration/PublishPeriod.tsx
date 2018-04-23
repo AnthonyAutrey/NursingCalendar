@@ -9,6 +9,7 @@ interface Props {
 interface State {
 	publishStartDate: string;
 	publishEndDate: string;
+	periodLocked: boolean;
 	loading: boolean;
 }
 
@@ -19,6 +20,7 @@ export class PublishPeriod extends React.Component<Props, State> {
 		this.state = {
 			publishStartDate: '',
 			publishEndDate: '',
+			periodLocked: true,
 			loading: false
 		};
 	}
@@ -71,9 +73,35 @@ export class PublishPeriod extends React.Component<Props, State> {
 							<h4 className="card-title">Calendar Publish Period</h4>
 							<hr />
 							<p className="d-none d-md-block" >
-								During this period, the calendar will be visible to students and events will have to be approved before being created or modified.
+								During this period, the calendar will be visible to students and events can only be scheduled by administrators.
 							</p>
 							{dates}
+							<div className="form-group row">
+								<label className="col-form-label col-md-3">Scheduling:</label>
+								<div className="col-md-9">
+									<button
+										className="btn btn-primary btn-block"
+										type="button"
+										onClick={() => this.setState({ periodLocked: !this.state.periodLocked })}
+										style={{ wordWrap: 'break-word', whiteSpace: 'normal' }}
+									>
+										{
+											this.state.periodLocked ?
+												<span>
+													<span className="oi oi-lock-locked" />
+													<span>&nbsp;&nbsp;</span>
+													Only Administrators Can Schedule
+												</span>
+												:
+												<span>
+													<span className="oi oi-lock-unlocked" />
+													<span>&nbsp;&nbsp;</span>
+													Instructors Can Schedule
+												</span>
+										}
+									</button>
+								</div>
+							</div>
 							<hr />
 							<div className="row">
 								<button tabIndex={3} type="submit" className="btn btn-primary btn-block mx-2 mt-2">
@@ -93,7 +121,7 @@ export class PublishPeriod extends React.Component<Props, State> {
 
 		request.get('/api/publishdates').end((error: {}, res: any) => {
 			if (res && res.body)
-				this.setState({ publishStartDate: res.body.Start, publishEndDate: res.body.End, loading: false });
+				this.setState({ publishStartDate: res.body.Start, publishEndDate: res.body.End, periodLocked: res.body.Locked, loading: false });
 			else {
 				this.props.handleShowAlert('error', 'Error getting calendar publish dates.');
 				this.setState({ loading: false });
@@ -125,7 +153,8 @@ export class PublishPeriod extends React.Component<Props, State> {
 		let queryData: {} = {
 			insertValues: {
 				Start: this.state.publishStartDate,
-				End: this.state.publishEndDate
+				End: this.state.publishEndDate,
+				Locked: this.state.periodLocked
 			}
 		};
 

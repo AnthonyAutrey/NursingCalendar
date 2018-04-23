@@ -8,7 +8,7 @@ interface Props {
 	handleShowEvent: Function;
 	handleGrant: Function;
 	handleDeny: Function;
-	isAdminRequest: boolean;
+	recurringOverrideRequest: boolean;
 }
 
 interface State {
@@ -29,6 +29,8 @@ export class OverrideRequest extends React.Component<Props, State> {
 	render() {
 		let titleText: string = 'Request for Timeslot of Your Event:';
 		let messageText = this.props.overrideRequestData.fromName + ' has requested the timeslot of your event, ';
+		if (this.props.recurringOverrideRequest)
+			messageText = this.props.overrideRequestData.fromName + ' has requested the timeslot of all recurrences of your event, ';
 		let overrideMessageText = null;
 		let placeholderText = 'Explain why you\'re granting or denying this request.';
 		if (this.props.overrideRequestData.adminRequested) {
@@ -84,6 +86,14 @@ export class OverrideRequest extends React.Component<Props, State> {
 			);
 		}
 
+		let recurringRequestWarning = null;
+		if (this.props.recurringOverrideRequest)
+			recurringRequestWarning = (
+				<p className="text-danger">
+					<strong>This is a request for all recurrences of the event!</strong>
+				</p>
+			);
+
 		let messageAddedPunctuation = '';
 		let messagePunctuation = this.props.overrideRequestData.message.slice(this.props.overrideRequestData.message.length - 1);
 		if (messagePunctuation !== '.' && messagePunctuation !== '!' && messagePunctuation !== '?')
@@ -99,6 +109,7 @@ export class OverrideRequest extends React.Component<Props, State> {
 					</p>
 				</div>
 				{denialMessage}
+				{recurringRequestWarning}
 				<hr />
 				<div className="d-flex form-group">
 					<label className="font-weight-bold mr-3">Reply:</label>

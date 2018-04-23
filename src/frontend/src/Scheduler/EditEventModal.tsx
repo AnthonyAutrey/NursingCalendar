@@ -18,6 +18,7 @@ interface State {
 	description: string;
 	groups: string[];
 	recurringInfo?: RecurringEventInfo;
+	recurringMenu: 'none' | 'delete' | 'save';
 }
 
 export class EditEventModal extends React.Component<Props, State> {
@@ -29,7 +30,8 @@ export class EditEventModal extends React.Component<Props, State> {
 			show: false,
 			title: '',
 			description: '',
-			groups: []
+			groups: [],
+			recurringMenu: 'none'
 		};
 	}
 
@@ -99,11 +101,11 @@ export class EditEventModal extends React.Component<Props, State> {
 			</div>
 		);
 
-		if (this.props.groupOptionsFromAPI.length === this.state.groups.length)
+		if (this.props.groupOptionsFromAPI.length === this.state.groups.length || this.state.groups.length >= 7)
 			addButton = null;
 
 		return (
-			<div onKeyPress={this.handleKeyPress} style={backdropStyle}>
+			<div style={backdropStyle}>
 				<div className="modal-dialog" role="document">
 					<div className="modal-content">
 						<div className="modal-header">
@@ -145,19 +147,59 @@ export class EditEventModal extends React.Component<Props, State> {
 						<div className="modal-footer">
 							<div className="container-fluid m-0 p-0">
 								<div className="d-flex flex-wrap">
-									<div className="mr-auto">
-										<button type="button" className="btn btn-danger" onClick={this.delete}>
-											<span className=" oi oi-trash" />
-											<span>&nbsp;&nbsp;</span>
-											Delete
-										</button>
-									</div>
-									<div className="d-block d-sm-none mr-0">
-										<button tabIndex={3} type="button" className="btn btn-primary" onClick={this.save}>Save</button>
-									</div>
-									<div className="d-none d-sm-block mr-0">
-										<button tabIndex={3} type="button" className="btn btn-primary" onClick={this.save}>Save Changes</button>
-									</div>
+									{
+										this.state.recurringMenu === 'delete'
+											?
+											<div>
+												<button type="button" className="btn btn-danger mr-2 mb-1" onClick={() => this.deleteRecurring(true)}>
+													<span className=" oi oi-trash" />
+													<span>&nbsp;&nbsp;</span>
+													All Recurring
+												</button>
+												<button type="button" className="btn btn-danger mb-1" onClick={() => this.deleteRecurring(false)}>
+													<span className=" oi oi-trash" />
+													<span>&nbsp;&nbsp;</span>
+													Only This Event
+												</button>
+											</div>
+											:
+											<div>
+												<button type="button" className="btn btn-danger mb-1" onClick={this.delete}>
+													<span className=" oi oi-trash" />
+													<span>&nbsp;&nbsp;</span>
+													Delete
+												</button>
+											</div>
+									}
+									{
+										this.state.recurringMenu === 'save'
+											?
+											<div className="ml-auto d-flex">
+												<div className="mr-2 mb-1">
+													<button tabIndex={3} type="button" className="btn btn-primary" onClick={() => this.saveRecurring(false)}>
+														<span className=" oi oi-file" />
+														<span>&nbsp;&nbsp;</span>
+														Only This Event
+													</button>
+												</div>
+												<div className="mr-0 mb-1">
+													<button tabIndex={3} type="button" className="btn btn-primary" onClick={() => this.saveRecurring(true)}>
+														<span className=" oi oi-file" />
+														<span>&nbsp;&nbsp;</span>
+														All Recurring
+													</button>
+												</div>
+											</div>
+											:
+											<div className="ml-auto">
+												<div className="d-block d-sm-none mr-0 ml-auto mb-1">
+													<button tabIndex={3} type="button" className="btn btn-primary" onClick={this.save}>Save</button>
+												</div>
+												<div className="d-none d-sm-block mr-0 ml-auto mb-1">
+													<button tabIndex={3} type="button" className="btn btn-primary" onClick={this.save}>Save Changes</button>
+												</div>
+											</div>
+									}
 								</div>
 							</div>
 						</div>
@@ -178,7 +220,8 @@ export class EditEventModal extends React.Component<Props, State> {
 
 	// Title and Description ///////////////////////////////////////////////////////////////////////////////////////////////
 	private handleTitleChange = (event: any) => {
-		this.setState({ title: event.target.value });
+		if (event.target.value.length <= 60)
+			this.setState({ title: event.target.value });
 	}
 
 	private handleDescriptionChange = (event: any) => {
@@ -219,7 +262,7 @@ export class EditEventModal extends React.Component<Props, State> {
 		if (recurringInfo && recurringInfo.type === 'daily')
 			detailString = 'Daily from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
 		else if (recurringInfo && recurringInfo.type === 'weekly')
-			detailString = 'Weekly on ' + this.getWeeklyCommaString() +
+			detailString = 'Weekly on ' + RecurringEvents.getWeeklyCommaString(recurringInfo) +
 				', from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
 		else if (recurringInfo && recurringInfo.type === 'monthly')
 			detailString = 'Monthly, ' + RecurringEvents.getMonthlyDayIndicatorString(recurringInfo.startDate) + '.';
@@ -227,53 +270,49 @@ export class EditEventModal extends React.Component<Props, State> {
 		return detailString;
 	}
 
-	getWeeklyCommaString = (): string => {
-		if (this.state.recurringInfo) {
-			let commaString = '';
-			let weekDays = this.state.recurringInfo.weeklyDays;
-			if (weekDays && weekDays.includes('m'))
-				commaString += 'Mon, ';
-			if (weekDays && weekDays.includes('t'))
-				commaString += 'Tues, ';
-			if (weekDays && weekDays.includes('w'))
-				commaString += 'Wed, ';
-			if (weekDays && weekDays.includes('r'))
-				commaString += 'Thurs, ';
-			if (weekDays && weekDays.includes('f'))
-				commaString += 'Fri, ';
-			if (weekDays && weekDays.includes('s'))
-				commaString += 'Sat, ';
-			if (weekDays && weekDays.includes('u'))
-				commaString += 'Sun, ';
-
-			if (commaString.substr(commaString.length - 2) === ', ')
-				commaString = commaString.substr(0, commaString.length - 2);
-
-			return commaString;
-		} else
-			return '';
-	}
-
-	// Buttons and Keypresses //////////////////////////////////////////////////////////////////////////////////////////////
-	private handleKeyPress = (event: any) => {
-		if (event.key === 'Enter')
-			this.save();
-	}
+	// Save and Delete //////////////////////////////////////////////////////////////////////////////////////////////
 
 	private save = () => {
+		if (this.state.recurringInfo)
+			this.setState({ recurringMenu: 'save' });
+		else {
+			let title = this.state.title;
+			this.props.saveHandler(this.state.eventID, title, this.state.description, this.state.groups);
+			this.resetState();
+		}
+	}
+
+	private saveRecurring = (saveAllRecurring: boolean) => {
 		let title = this.state.title;
-		this.props.saveHandler(this.state.eventID, title, this.state.description, this.state.groups);
+		this.props.saveHandler(this.state.eventID, title, this.state.description, this.state.groups, saveAllRecurring);
 		this.resetState();
 	}
 
 	private delete = () => {
+		if (this.state.recurringInfo)
+			this.setState({ recurringMenu: 'delete' });
+		else {
+			this.resetState();
+			this.props.deleteHandler(this.state.eventID);
+		}
+	}
+
+	private deleteRecurring = (deleteAllRecurring: boolean) => {
 		this.resetState();
-		this.props.deleteHandler(this.state.eventID);
+		this.props.deleteHandler(this.state.eventID, deleteAllRecurring);
 	}
 
 	// Reset Everything ////////////////////////////////////////////////////////////////////////////////////////////////////
 	private resetState = () => {
-		this.setState({ eventID: undefined, title: '', description: '', groups: [], show: false, recurringInfo: undefined });
+		this.setState({
+			eventID: undefined,
+			title: '',
+			description: '',
+			groups: [],
+			show: false,
+			recurringInfo: undefined,
+			recurringMenu: 'none'
+		});
 	}
 }
 

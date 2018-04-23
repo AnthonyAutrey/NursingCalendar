@@ -18,12 +18,11 @@ $app->post('/login', function (Request $request, Response $response, array $args
 	}
 
 	if (ComputingCenter::authorizeUser($cwid, $pin)) {
-		$result = json_encode(['authenticated' => true]);
-		$response->getBody()->write($result);
+		$result = ['authenticated' => true];
 		$userDetails = ComputingCenter::getUserDetails($cwid);
-
+		
 		if (isNewUser($cwid))
-			persistNewUser($cwid, $userDetails);
+		persistNewUser($cwid, $userDetails);
 		elseif ($userDetails['role'] == 'instructor') {
 			persistName($cwid, $userDetails['firstName'], $userDetails['lastName']);
 			if (instructorIsAdmin($cwid)) 
@@ -37,10 +36,15 @@ $app->post('/login', function (Request $request, Response $response, array $args
 		$_SESSION['role'] = $userDetails['role'];
 		$_SESSION['firstName'] = $userDetails['firstName'];
 		$_SESSION['lastName'] = $userDetails['lastName'];
-
+		
+		$result['cwid'] = $cwid;
+		$result['role'] = $userDetails['role'];
+		$result['firstName'] = $userDetails['firstName'];
+		$result['lastName'] = $userDetails['lastName'];
 	} else
 		session_destroy();
-
+	
+	$response->getBody()->write(json_encode($result));
 	$response = $response->withHeader('Content-type', 'application/json');
     return $response;
 });
@@ -48,7 +52,8 @@ $app->post('/login', function (Request $request, Response $response, array $args
 $app->get('/logout', function (Request $request, Response $response, array $args) {
 	session_destroy();
 	
-	$response->getBody()->write("Successfully logged out.");
+	$response->getBody()->write(json_encode(['Logged out']));
+	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 });
 

@@ -48,6 +48,7 @@ require '../../src/api/routes/Logs.php';
 require '../../src/api/routes/Notifications.php';
 require '../../src/api/routes/OverrideRequests.php';
 require '../../src/api/routes/PublishDates.php';
+require '../../src/api/routes/RecurringEventRelations.php';
 
 // Error Handling /////////////////////////////////////////////////////////////////////////////////////////////////////
 

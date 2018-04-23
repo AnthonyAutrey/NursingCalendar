@@ -44,9 +44,12 @@ export class NavigationBar extends React.Component<Props, {}> {
 		return (
 			<nav className="navbar navbar-expand-md navbar-light bg-light border-bottom mb-3 d-print-none">
 				<a className="navbar-brand text-primary garamond mr-4 ml-2 d-md-none" href="/">
-					<h3 style={headerStyle}>
-						ULM Nursing Schedule
-					</h3>
+					<div className="d-flex justify-content-center align-items-center">
+						<img src="../../ulm-academic-logo-circle.png" alt="logo" style={{ maxWidth: 40 }} />
+						<h3 style={headerStyle} className="ml-2">
+							ULM Nursing Schedule
+						</h3>
+					</div>
 				</a>
 				<button
 					className="navbar-toggler border-0"
@@ -61,9 +64,12 @@ export class NavigationBar extends React.Component<Props, {}> {
 				</button>
 				<div className="collapse navbar-collapse" id="navbar">
 					<a className="navbar-brand text-primary garamond mr-4 ml-2 d-none d-md-block" href="/">
-						<h1 style={headerStyle}>
-							ULM Nursing Schedule
-						</h1>
+						<div className="d-flex justify-content-center align-items-center">
+							<img src="../../ulm-academic-logo-circle.png" alt="logo" style={{ maxWidth: 70 }} />
+							<h1 style={headerStyle} className="ml-3">
+								ULM Nursing Schedule
+							</h1>
+						</div>
 					</a>
 					<ul className="navbar-nav mt-2 mt-lg-0">
 						{navLinks}
@@ -98,18 +104,18 @@ export class NavigationBar extends React.Component<Props, {}> {
 					<a className="nav-link" href="/administration">
 						<span className=" oi oi-key" />
 						&nbsp;
-			Administration
-		</a>
+						Administration
+					</a>
 				</li>
 			);
 
 		navLinks.push(
 			<li key={uuid()} className="nav-item">
-				<a className="nav-link" href="/" onClick={this.props.handleLogout}>
+				<a className="nav-link" href="#" onClick={this.props.handleLogout}>
 					<span className=" oi oi-account-logout" />
 					&nbsp;
-			Logout
-		</a>
+					Logout
+				</a>
 			</li>
 		);
 

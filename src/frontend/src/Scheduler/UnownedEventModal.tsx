@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Event } from './SchedulerCalendar';
 import { CSSProperties } from 'react';
+import { RecurringEventInfo, RecurringEvents } from '../Utilities/RecurringEvents';
 const request = require('superagent');
 const uuid = require('uuid/v4');
 
@@ -12,6 +13,8 @@ interface Props {
 interface State {
 	show: boolean;
 	showRequestForm: boolean;
+	showRecurrenceOptions: boolean;
+	requestForAllRecurring: boolean;
 	requestMessage: string;
 	event: Event | null;
 }
@@ -22,6 +25,8 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		this.state = {
 			show: false,
 			showRequestForm: false,
+			showRecurrenceOptions: false,
+			requestForAllRecurring: false,
 			requestMessage: '',
 			event: null
 		};
@@ -50,6 +55,10 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		if (this.state.event.description === '')
 			descriptionString = 'No description.';
 
+		let recurringDetailString = null;
+		if (this.state.event && this.state.event.recurringInfo)
+			recurringDetailString = this.getRecurringDetailString();
+
 		let groupString: string[] = this.state.event.groups.map(event => {
 			return event + ', ';
 		});
@@ -68,7 +77,11 @@ export class UnownedEventModal extends React.Component<Props, State> {
 						value={this.state.requestMessage}
 						onChange={this.handleChangeRequestMessage}
 						className="form-control"
-						placeholder="Describe why you need this timeslot."
+						placeholder={
+							this.state.requestForAllRecurring ?
+								'Describe why you need this timeslot for the entire recurring event.' :
+								'Describe why you need this timeslot.'
+						}
 						rows={3}
 					/>
 					<div className="d-flex">
@@ -109,8 +122,20 @@ export class UnownedEventModal extends React.Component<Props, State> {
 							<div className="form-group text-left">
 								<label className="font-weight-bold">Description:</label>
 								<br />
-								{descriptionString}
+								<p style={{ wordWrap: 'break-word' }}>
+									{descriptionString}
+								</p>
 							</div>
+							{
+								this.state.event.recurringInfo &&
+								<div className=" text-left">
+									<label className="font-weight-bold">Recurrence:</label>
+									<br />
+									<p style={{ wordWrap: 'break-word' }}>
+										{recurringDetailString}
+									</p>
+								</div>
+							}
 							<div className="form-group text-left">
 								<label className="font-weight-bold">Groups:</label>
 								<br />
@@ -124,15 +149,40 @@ export class UnownedEventModal extends React.Component<Props, State> {
 									<div className="mr-auto">
 										{pendingOverrideMessage}
 										<button
-											hidden={this.state.showRequestForm || this.state.event.pendingOverride}
+											hidden={this.state.showRequestForm || this.state.event.pendingOverride || this.state.showRecurrenceOptions}
 											type="button"
 											className="btn btn-danger"
-											onClick={this.showRequestForm}
+											onClick={this.showRecurrenceOptions}
 										>
 											<span className=" oi oi-loop" />
 											<span>&nbsp;&nbsp;</span>
 											Request This Timeslot
 										</button>
+										{
+											this.state.showRecurrenceOptions &&
+											<div>
+												<button
+													hidden={this.state.showRequestForm || this.state.event.pendingOverride}
+													type="button"
+													className="btn btn-danger mr-2"
+													onClick={this.handleSetNotRecurring}
+												>
+													<span className=" oi oi-loop" />
+													<span>&nbsp;&nbsp;</span>
+													Only This Event
+												</button>
+												<button
+													hidden={this.state.showRequestForm || this.state.event.pendingOverride}
+													type="button"
+													className="btn btn-danger"
+													onClick={this.handleSetRecurring}
+												>
+													<span className=" oi oi-loop" />
+													<span>&nbsp;&nbsp;</span>
+													All Recurring
+												</button>
+											</div>
+										}
 									</div>
 									<div className="mr-0">
 										<button tabIndex={3} type="button" className="btn btn-primary" onClick={this.close}>Close</button>
@@ -155,6 +205,39 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		this.resetState();
 	}
 
+	// Recurrence //////////////////////////////////////////////////////////////////////////////////////////////////////////
+	private showRecurrenceOptions = () => {
+		if (this.state.event && this.state.event.recurringInfo)
+			this.setState({ showRecurrenceOptions: true });
+		else
+			this.showRequestForm();
+	}
+
+	private handleSetRecurring = () => {
+		this.setState({ requestForAllRecurring: true, showRecurrenceOptions: false, showRequestForm: true });
+	}
+
+	private handleSetNotRecurring = () => {
+		this.setState({ requestForAllRecurring: false, showRecurrenceOptions: false, showRequestForm: true });
+	}
+
+	private getRecurringDetailString = (): string => {
+		let detailString = '';
+		if (this.state.event && this.state.event.recurringInfo) {
+			let recurringInfo = this.state.event.recurringInfo;
+			console.log(recurringInfo);
+			if (recurringInfo && recurringInfo.type === 'daily')
+				detailString = 'Daily from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
+			else if (recurringInfo && recurringInfo.type === 'weekly')
+				detailString = 'Weekly on ' + RecurringEvents.getWeeklyCommaString(recurringInfo) +
+					', from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
+			else if (recurringInfo && recurringInfo.type === 'monthly')
+				detailString = 'Monthly, ' + RecurringEvents.getMonthlyDayIndicatorString(recurringInfo.startDate) + '.';
+		}
+
+		return detailString;
+	}
+
 	// Request TimeSlot ////////////////////////////////////////////////////////////////////////////////////////////////////
 	private showRequestForm = () => {
 		this.setState({ showRequestForm: true });
@@ -173,37 +256,42 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		if (this.state.requestMessage.length < 1)
 			alert('Please include a message with your request.');
 		else {
-			new Promise((resolve, reject) => {
-				if (!this.state.event)
-					reject();
-				else {
-					let queryData = {
-						insertValues: {
-							'EventID': this.state.event.id,
-							'LocationName': this.state.event.location,
-							'RoomName': this.state.event.room,
-							'Message': this.state.requestMessage,
-							'Time': this.getCurrentDateTimeInSqlFormat(),
-							'RequestorCWID': this.props.cwid
-						}
-					};
-					let queryDataString = JSON.stringify(queryData);
-					request.put('/api/overriderequests').set('queryData', queryDataString).end((error: {}, res: any) => {
-						if (res && res.body) {
-							resolve();
-							console.log('created override request: ' + JSON.stringify(res.body));
-						} else
-							reject();
-					});
-				}
-			}).then(() => {
+			this.persistOverrideRequest().then(() => {
 				if (this.state.event)
-					this.props.handleOverrideRequest(this.state.event.id);
+					this.props.handleOverrideRequest(this.state.event.id, this.state.requestForAllRecurring);
 			}).catch(() => {
 				// TODO: handle failure better
 				alert('Something went wrong!');
 			});
 		}
+	}
+
+	private persistOverrideRequest = (): Promise<void> => {
+		return new Promise((resolve, reject) => {
+			if (!this.state.event)
+				reject();
+			else {
+				let queryData = {
+					insertValues: {
+						'EventID': this.state.event.id,
+						'LocationName': this.state.event.location,
+						'RoomName': this.state.event.room,
+						'Message': this.state.requestMessage,
+						'Time': this.getCurrentDateTimeInSqlFormat(),
+						'RequestorCWID': this.props.cwid,
+						'RecurringEventRequest': this.state.requestForAllRecurring ? 1 : 0
+					}
+				};
+				let queryDataString = JSON.stringify(queryData);
+				request.put('/api/overriderequests').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body) {
+						resolve();
+						console.log('created override request: ' + JSON.stringify(res.body));
+					} else
+						reject();
+				});
+			}
+		});
 	}
 
 	private getCurrentDateTimeInSqlFormat = () => {
@@ -213,7 +301,14 @@ export class UnownedEventModal extends React.Component<Props, State> {
 
 	// Reset Everything ////////////////////////////////////////////////////////////////////////////////////////////////////
 	private resetState = () => {
-		this.setState({ event: null, show: false, showRequestForm: false, requestMessage: '' });
+		this.setState({
+			event: null,
+			show: false,
+			showRequestForm: false,
+			requestMessage: '',
+			showRecurrenceOptions: false,
+			requestForAllRecurring: false
+		});
 	}
 }
 

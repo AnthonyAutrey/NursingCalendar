@@ -73,7 +73,6 @@ export class ManageGroups extends React.Component<Props, State> {
 							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
 						</button>
 						<hr />
-						{this.state.groups.length < 1 && 'No Groups'}
 						{
 							this.state.groups.length > 0 &&
 							<div className="form-group row">
@@ -170,9 +169,14 @@ export class ManageGroups extends React.Component<Props, State> {
 				newGroupCount++;
 		});
 
+		this.state.groups.forEach(group => {
+			if (group.name.trim() === ('New Group ' + ((newGroupCount <= 0) ? '' : newGroupCount)).trim())
+				newGroupCount++;
+		});
+
 		let newGroup: Group = {
-			dbName: ('New Group ' + ((newGroupCount === 0) ? '' : newGroupCount)).trim(),
-			name: ('New Group ' + ((newGroupCount === 0) ? '' : newGroupCount)).trim(),
+			dbName: ('New Group ' + ((newGroupCount <= 0) ? '' : newGroupCount)).trim(),
+			name: ('New Group ' + ((newGroupCount <= 0) ? '' : newGroupCount)).trim(),
 			description: '',
 			crns: []
 		};

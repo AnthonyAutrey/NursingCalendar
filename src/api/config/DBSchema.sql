@@ -103,6 +103,7 @@ CREATE TABLE OverrideRequests
 	Denied Boolean NOT NULL DEFAULT 0,
 	RequestorCWID INT NOT NULL,
 	AdminRequested Boolean NOT NULL DEFAULT 0,
+	RecurringEventRequest Boolean NOT NULL DEFAULT 0,
 	PRIMARY KEY (EventID, LocationName, RoomName),
 	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName) ON UPDATE CASCADE ON DELETE CASCADE,
 	FOREIGN KEY (RequestorCWID) REFERENCES Users(CWID) ON UPDATE CASCADE ON DELETE CASCADE
@@ -165,8 +166,10 @@ CREATE TABLE RecurringEventRelation
 		-- example: '2f' for every second friday, '5u' for every last sunday
 		-- if doesn't recur monthly, then NULL
 	WeeklyDays VARCHAR(7), -- use single character identifiers: (mtwrfsu), if doesn't recur weekly, then NULL
+	StartDate VARCHAR(30) NOT NULL,
+	EndDate VARCHAR(30) NOT NULL,
 	PRIMARY KEY (RecurringID, EventID, LocationName, RoomName),
-	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName)
+	FOREIGN KEY (EventID, LocationName, RoomName) REFERENCES Events(EventID, LocationName, RoomName) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE GroupCRNs

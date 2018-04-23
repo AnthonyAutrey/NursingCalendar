@@ -98,7 +98,7 @@ function getUpdateQueryData(Request $request) : array {
 		if (isset($queryData->where))
 			$where = $queryData->where;
 		if (isset($queryData->groups))
-			$groups = json_decode($qd->groups);
+			$groups = $queryData->groups;
 	
 		return sanitize(['setValues'=>$setValues, 'where'=>$where, 'groups'=>$groups]);
 	}
@@ -110,10 +110,24 @@ function getDeleteQueryData(Request $request) : array {
 
 	if(count($request->getHeader('queryData')) > 0 and (!is_null($request->getHeader('queryData')[0])))
 		$queryData = json_decode($request->getHeader('queryData')[0]);
-	if (isset($queryData->where))
-		$where = $queryData->where;
 
-	return sanitize(['where'=>$where]);
+	if (is_array($queryData)) {
+		$queryDataArray = [];		
+		foreach ($queryData as $qd) {
+			if (isset($qd->where))
+				array_push($queryDataArray, ['where'=>$qd->where]);
+			else
+				array_push($queryDataArray, ['where'=>null]);
+		}
+
+		return sanitize($queryDataArray);
+	}
+	else {
+		if (isset($queryData->where))
+			$where = $queryData->where;
+
+		return sanitize(['where'=>$where]);
+	}
 }
 
 // Event Groups //
@@ -136,16 +150,26 @@ function getEventGroupsToInsert(Request $request) : array {
 function insertEventGroups($groups, $eventID, $location, $room) : array {
 	$groupsToInsert = $groups;
 	$insertResults = [];
+	$queries = [""];
+
 	foreach ($groupsToInsert as $groupToInsert) {
 		$groupInsertValues = array();
 		$groupInsertValues['EventID'] = $eventID;
 		$groupInsertValues['LocationName'] = $location;
 		$groupInsertValues['RoomName'] = $room;
 		$groupInsertValues['GroupName'] = $groupToInsert;
-		$groupRelationQueryString = DBUtil::buildInsertQuery('EventGroupRelation', $groupInsertValues);
-		$insertResults[$groupToInsert] = DBUtil::runCommand($groupRelationQueryString);
+
+		if (strlen($queries[count($queries) - 1]) > 100)
+			array_push($queries, "");
+
+		$queries[count($queries) - 1] .= DBUtil::buildInsertQuery('EventGroupRelation', $groupInsertValues) . ';';
 	}
-	
+
+	foreach ($queries as $query) {
+		if ($query !== "")
+			$insertResults[$groupToInsert] = DBUtil::runCommand($query);
+	}
+
 	return $insertResults;
 }
 

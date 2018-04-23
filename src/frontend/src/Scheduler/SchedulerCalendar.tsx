@@ -10,6 +10,7 @@ import { RecurringEventInfo, RecurringEvents } from '../Utilities/RecurringEvent
 
 import { Duration, Moment } from 'moment';
 import * as moment from 'moment';
+import { resolve } from 'url';
 const FullCalendarReact = require('fullcalendar-reactwrapper');
 const request = require('superagent');
 
@@ -21,6 +22,7 @@ interface Props {
 	handleToolbarMessage: Function;
 	handleToolbarText: Function;
 	handleToolbarReset: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -28,6 +30,8 @@ interface State {
 	showCreateModal: boolean;
 	groupOptionsFromAPI: string[];
 	loading: boolean;
+	publishPeriodStart: Moment;
+	publishPeriodEnd: Moment;
 }
 
 export interface Event {
@@ -42,6 +46,7 @@ export interface Event {
 	ownerName: string;
 	groups: string[];
 	pendingOverride: boolean;
+	overrideRecurring?: boolean;
 	recurringInfo?: RecurringEventInfo;
 	color?: string;
 }
@@ -70,12 +75,14 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			events: new Map<number, Event>(),
 			showCreateModal: false,
 			groupOptionsFromAPI: [],
-			loading: false
+			loading: false,
+			publishPeriodStart: moment('8-05-1985'),
+			publishPeriodEnd: moment('8-05-2585'),
 		};
 	}
 
 	componentWillMount() {
-		this.getStateFromDB();
+		this.getStateFromDB(this.props.room, this.props.location);
 		let route = '/api/groups';
 		if (this.props.role === 'instructor') {
 			route = '/api/usergroups/' + this.props.cwid;
@@ -243,7 +250,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					selectable={true}
 					selectOverlap={false}
 					selectHelper={true}
-					viewRender={(view: any) => this.cacheViewAndDate(view)}
+					viewRender={(view: any, element: any) => this.cacheViewAndDate(view, element)}
 					firstDay={1}
 					eventLongPressDelay={0}
 					selectLongPressDelay={300}
@@ -258,6 +265,13 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		// Don't allow events to be created in month view
 		if (this.currentView === 'month')
 			return;
+
+		// Check if publish period
+		if (end.isAfter(this.state.publishPeriodStart) && start.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+			this.forceUpdate();
+			return;
+		}
 
 		// Don't allow events to be less than x minutes
 		if (moment.duration(end.diff(start)).asMinutes() < 30)
@@ -292,6 +306,11 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		let events: Map<number, Event> = this.cloneStateEvents();
 		let index = this.getNextEventIndex();
 		let placeholder = events.get(Number.MAX_SAFE_INTEGER);
+
+		let color = '#800029';
+		if (groups.length === 1)
+			color = ColorGenerator.getColor(groups[0]);
+
 		if (placeholder) {
 			events.set(index, {
 				id: index,
@@ -306,17 +325,21 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				groups: groups,
 				pendingOverride: false,
 				recurringInfo: recurringInfo,
-				color: ColorGenerator.getColor(groups[0])
+				color: color
 			});
+
 			events.delete(Number.MAX_SAFE_INTEGER);
 		}
 
-		// TODO: handle creation of recurring events using recurring event info
-		// add recurring info for api to recurring events
-		// do conflict checks before making it work
 		let recurringEvents: Event[] = [];
 		if (recurringInfo && placeholder)
 			recurringEvents = this.getRecurringEvents(title, description, groups, placeholder.start, placeholder.end, recurringInfo);
+
+		if (recurringInfo && this.checkIfRecurringEventsFallInPublishPeriod(recurringEvents) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+			this.closeEventCreationModal();
+			return;
+		}
 
 		let filteredEventsAndConflicts = this.getFilteredEventsAndConflicts(recurringEvents);
 		let conflictingEvents = filteredEventsAndConflicts.conflictingEvents;
@@ -324,8 +347,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		if (conflictingEvents.length > 0) {
 			let confirmMessage = 'Some recurring events couldn\'t be added due to conflicts with the following events: ';
 			conflictingEvents.forEach(event => {
-				confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).toLocaleString() +
-					'\n      end: ' + moment(event.end).toLocaleString();
+				confirmMessage += '\n\n' + event.title + '\n      start: ' + moment(event.start).utc().toLocaleString().slice(0, 24) +
+					'\n      end: ' + moment(event.end).utc().toLocaleString().slice(0, 24);
 			});
 			if (!confirm(confirmMessage + '\n\nDo you want to continue?'))
 				return;
@@ -338,6 +361,31 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		});
 
 		this.setState({ events: events }, () => this.closeEventCreationModal());
+	}
+
+	// Recurring Events //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	checkIfRecurringEventsFallInPublishPeriod = (recurringEvents: Event[]) => {
+		let eventInPublishPeriod = false;
+		recurringEvents.forEach(event => {
+
+			let eventStartString = event.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = event.end || '';
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+
+			let publishPeriodStart = this.state.publishPeriodStart;
+			let publishPeriodEnd = this.state.publishPeriodEnd;
+
+			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd))
+				eventInPublishPeriod = true;
+		});
+
+		return eventInPublishPeriod;
 	}
 
 	getDailyRecurringEvents(
@@ -374,7 +422,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			});
 
 			iterateDate.add(1, 'days');
-			// recurringIndex++;
 		}
 
 		return recurringEvents;
@@ -391,19 +438,25 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		let recurringEvents: Event[] = [];
 		let beginDate = moment(beginDateString).utc(true);
 		let endDate = moment(endDateString).utc(true);
-		let iterateDate = beginDate.clone().add(1, 'days');
+		let iterateBeginDate = beginDate.clone().add(1, 'days');
+		let iterateEndDate = endDate.clone().add(1, 'days');
 		let repeatEndDate = recurringInfo.endDate.clone().add(1, 'days');
 
-		while (iterateDate.isBefore(repeatEndDate)) {
-			let start = iterateDate.clone().set({ hour: beginDate.hour(), minute: beginDate.minute() }).toISOString();
-			let end = iterateDate.clone().set({ hour: endDate.hour(), minute: endDate.minute() }).toISOString();
+		while (iterateBeginDate.isBefore(repeatEndDate)) {
+			let start = iterateBeginDate.clone().set({ hour: beginDate.hour(), minute: beginDate.minute() }).toISOString();
+			let end = iterateEndDate.clone().set({ hour: endDate.hour(), minute: endDate.minute() }).toISOString();
 
 			if (this.createEventModal && (
 				(recurringInfo.type === 'monthly' &&
-					RecurringEvents.getWeekDayCount(iterateDate) + RecurringEvents.getDayOfWeekChar(iterateDate) === recurringInfo.monthlyDay) ||
+					RecurringEvents.getWeekDayCount(iterateBeginDate) + RecurringEvents.getDayOfWeekChar(iterateBeginDate) === recurringInfo.monthlyDay) ||
 				(recurringInfo.type === 'weekly' && recurringInfo.weeklyDays &&
-					recurringInfo.weeklyDays.includes(RecurringEvents.getDayOfWeekChar(iterateDate))) ||
-				recurringInfo.type === 'daily'))
+					recurringInfo.weeklyDays.includes(RecurringEvents.getDayOfWeekChar(iterateBeginDate))) ||
+				recurringInfo.type === 'daily')) {
+
+				let color = '#800029';
+				if (groups.length === 1)
+					color = ColorGenerator.getColor(groups[0]);
+
 				recurringEvents.push({
 					id: -1,
 					location: this.props.location,
@@ -417,46 +470,255 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					groups: groups,
 					pendingOverride: false,
 					recurringInfo: recurringInfo,
-					color: ColorGenerator.getColor(groups[0])
+					color: color
 				});
+			}
 
-			iterateDate.add(1, 'days');
-			// recurringIndex++;
+			iterateBeginDate.add(1, 'days');
+			iterateEndDate.add(1, 'days');
 		}
 
 		return recurringEvents;
 	}
 
-	getFilteredEventsAndConflicts = (events: Event[]): { filteredEvents: Event[], conflictingEvents: Event[] } => {
+	getFilteredEventsAndConflicts = (recurringEvents: Event[]): { filteredEvents: Event[], conflictingEvents: Event[] } => {
 		let conflictingEvents: Event[] = [];
 
-		let filteredEvents = events.filter(recurringEvent => {
-			if (recurringEvent.start.substr(recurringEvent.start.length - 1, 1) !== 'Z')
-				recurringEvent.start += '.000Z';
-			if (recurringEvent.end.substr(recurringEvent.end.length - 1, 1) !== 'Z')
-				recurringEvent.end += '.000Z';
+		let timeSet = new Set<string>();
+		this.getStateEventsAsArray().forEach((stateEvent: Event) => {
+			let eventStartString = stateEvent.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = stateEvent.end || '';
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
 
-			let recurringEventStart = moment(recurringEvent.start);
-			let recurringEventEnd = moment(recurringEvent.end);
+			let iterateDate = eventStart.clone();
+
+			while (iterateDate.isBefore(eventEnd)) {
+				timeSet.add(iterateDate.toISOString());
+				iterateDate.add(15, 'minutes');
+			}
+			timeSet.add(eventEnd.toISOString());
+		});
+
+		let filteredEvents = recurringEvents.filter(recurringEvent => {
+			if (recurringEvent.start.length < 20)
+				recurringEvent.start += '.000Z';
+			if (recurringEvent.end.length < 20)
+				recurringEvent.end += '.000Z';
+			let recurringEventStart = moment(recurringEvent.start).utc().add(15, 'minutes');
+			let recurringEventEnd = moment(recurringEvent.end).utc().add(-15, 'minutes');
+			let iterateDate = recurringEventStart.clone();
 
 			let noConflicts = true;
-			this.getStateEventsAsArray().forEach((stateEvent: Event) => {
-				if (stateEvent.start.substr(stateEvent.start.length - 1, 1) !== 'Z')
-					stateEvent.start += '.000Z';
-				if (stateEvent.end.substr(stateEvent.end.length - 1, 1) !== 'Z')
-					stateEvent.end += '.000Z';
-
-				if (recurringEventStart.isBefore(moment(stateEvent.end).utc()) &&
-					recurringEventEnd.isAfter(moment(stateEvent.start).utc())) {
-					conflictingEvents.push(stateEvent);
+			while (iterateDate.isBefore(recurringEventEnd)) {
+				if (timeSet.has(iterateDate.toISOString())) {
 					noConflicts = false;
 				}
-			});
+
+				iterateDate.add(15, 'minutes');
+			}
+
+			if (!noConflicts)
+				conflictingEvents.push(recurringEvent);
 
 			return noConflicts;
 		});
 
 		return { filteredEvents: filteredEvents, conflictingEvents: conflictingEvents };
+	}
+
+	// Persist Recurring Events //////////////////////////////////////////////////////////////////////////////////////////////////
+	getRecurringRelationsForRoomFromDB = (): Promise<{ uuid: string, eventID: string }[]> => {
+		return new Promise((resolved, reject) => {
+			let queryData = JSON.stringify({
+				where: {
+					LocationName: this.props.location,
+					RoomName: this.props.room,
+				}
+			});
+
+			request.get('/api/recurringeventrelations').set('queryData', queryData).end((error: {}, res: any) => {
+				if (res && res.body)
+					resolved(this.parseRecurringRelations(res.body));
+				else {
+					console.log('getRecurringRelationsForRoomFromDB failed');
+					reject();
+				}
+			});
+		});
+	}
+
+	parseRecurringRelations = (body: any[]): { uuid: string, eventID: string }[] => {
+		let recurringRelations: { uuid: string, eventID: string }[] = [];
+
+		body.forEach(dbRelation => {
+			recurringRelations.push({
+				uuid: dbRelation.RecurringID,
+				eventID: dbRelation.EventID
+			});
+		});
+
+		return recurringRelations;
+	}
+
+	persistRecurringEvents = (): Promise<null> => {
+		return new Promise((resolved, reject) => {
+			this.getRecurringRelationsForRoomFromDB().then(recurringRelations => {
+				let recurringRelationsToAdd = this.getRecurringRelationsToAddToDB(recurringRelations);
+				let recurringRelationsToDelete = this.getRecurringRelationsToDeleteFromDB(recurringRelations);
+
+				let promises = [
+					this.addRecurringRelationsToDB(recurringRelationsToAdd),
+					this.deleteRecurringRelationsFromDB(recurringRelationsToDelete)
+				];
+
+				Promise.all(promises).then(() => {
+					resolved();
+				}).catch(() => {
+					console.log('persistRecurringEvents failed top catch');
+					reject();
+				});
+
+			}).catch(() => {
+				console.log('persistRecurringEvents failed bottom catch');
+				reject();
+			});
+		});
+	}
+
+	getRecurringRelationsToAddToDB = (recurringRelations: { uuid: string, eventID: string }[]) => {
+
+		let recurringRelationValues: Set<string> = new Set();
+		recurringRelations.forEach(relation => {
+			recurringRelationValues.add(relation.eventID + relation.uuid);
+		});
+
+		let recurringEventsToAdd = this.getStateEventsAsArray().filter(event => {
+			return event.recurringInfo && !recurringRelationValues.has(event.id + event.recurringInfo.id);
+		});
+
+		let recurringRelationsToAdd = recurringEventsToAdd.map(event => {
+			if (event.recurringInfo) {
+				let relationToAdd: any = {
+					RecurringID: event.recurringInfo.id,
+					EventID: event.id,
+					LocationName: event.location,
+					RoomName: event.room,
+					RecurringType: event.recurringInfo.type,
+					StartDate: event.recurringInfo.startDate.toISOString(),
+					EndDate: event.recurringInfo.endDate.toISOString()
+				};
+
+				if (event.recurringInfo.monthlyDay)
+					relationToAdd.MonthlyWeekday = event.recurringInfo.monthlyDay;
+
+				if (event.recurringInfo.weeklyDays)
+					relationToAdd.WeeklyDays = event.recurringInfo.weeklyDays;
+
+				return relationToAdd;
+			} else
+				return {};
+		});
+
+		return recurringRelationsToAdd;
+	}
+
+	getRecurringRelationsToDeleteFromDB = (recurringRelations: { uuid: string, eventID: string }[]) => {
+
+		let eventRelationValues: Set<string> = new Set();
+		this.getStateEventsAsArray().forEach(event => {
+			if (event.recurringInfo)
+				eventRelationValues.add(event.id.toString() + event.recurringInfo.id);
+		});
+
+		let recurringRelationsToDelete = recurringRelations.filter(dbRelation => {
+			return !eventRelationValues.has(dbRelation.eventID + dbRelation.uuid);
+		});
+
+		let completedRecurringRelationsToDelete = recurringRelationsToDelete.map(relation => {
+			return {
+				RecurringID: relation.uuid,
+				EventID: relation.eventID,
+				LocationName: this.props.location,
+				RoomName: this.props.room,
+			};
+		});
+
+		return completedRecurringRelationsToDelete;
+	}
+
+	addRecurringRelationsToDB = (recurringRelations: {}[]): Promise<null> => {
+		return new Promise((resolved, reject) => {
+			if (recurringRelations.length <= 0) {
+				resolved();
+				return;
+			}
+
+			let queryData: {}[] = recurringRelations.map(relation => {
+				return {
+					insertValues: relation
+				};
+			});
+
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 10);
+				queryData.splice(0, 10);
+
+				let queryDataString = JSON.stringify(queryDataPart);
+				request.put('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body)
+						resolved();
+					else {
+						console.log('Couldn\t add recurring relations to db');
+						reject();
+					}
+				});
+			}
+		});
+	}
+
+	deleteRecurringRelationsFromDB = (recurringRelations: {}[]): Promise<null> => {
+		return new Promise((resolved, reject) => {
+			if (recurringRelations.length <= 0) {
+				resolved();
+				return;
+			}
+
+			let queryData: {}[] = recurringRelations.map((relation: any) => {
+				return {
+					where: {
+						RecurringID: relation.RecurringID,
+						EventID: relation.EventID,
+						RoomName: this.props.room,
+						LocationName: this.props.location
+					}
+				};
+			});
+
+			let promises = [];
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 20);
+				queryData.splice(0, 20);
+
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryDataPart);
+					request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+						if (res && res.body)
+							resAPI();
+						else {
+							console.log('Couldn\t delete recurring relations from db');
+							rejAPI();
+						}
+					});
+				}));
+			}
+
+			Promise.all(promises).then(() => { resolved(); }).catch(() => { reject(); });
+		});
 	}
 
 	closeEventCreationModal = () => {
@@ -470,32 +732,109 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		}
 	}
 
-	handleEventModify = (eventID: number, title: string, description: string, groups: string[]) => {
+	handleEventModify = (eventID: number, title: string, description: string, groups: string[], modifyAllRecurring: boolean = false) => {
 		let events = this.cloneStateEvents();
 		let eventToModify = events.get(eventID);
-		let color = '#800029';
-		if (groups.length === 1)
-			color = ColorGenerator.getColor(groups[0]);
 
 		if (eventToModify) {
-			eventToModify.title = title;
-			eventToModify.description = description;
-			eventToModify.groups = groups;
-			eventToModify.color = color;
-			events.set(eventID, eventToModify);
+			if (eventToModify.recurringInfo && modifyAllRecurring)
+				this.modifyEntireRecurringEvent(eventToModify, title, description, groups);
+			else {
+				let color = '#800029';
+				if (groups.length === 1)
+					color = ColorGenerator.getColor(groups[0]);
+				eventToModify.title = title;
+				eventToModify.description = description;
+				eventToModify.groups = groups;
+				eventToModify.color = color;
+				eventToModify.recurringInfo = undefined;
+				events.set(eventID, eventToModify);
+				this.setState({ events: events });
+			}
+		}
+	}
+
+	modifyEntireRecurringEvent = (event: Event, title: string, description: string, groups: string[]) => {
+		if (event.recurringInfo) {
+			let color = '#800029';
+			if (groups.length === 1)
+				color = ColorGenerator.getColor(groups[0]);
+
+			let recurringID = event.recurringInfo.id;
+			let eventMap = this.cloneStateEvents();
+			let events = this.getStateEventsAsArray().forEach(stateEvent => {
+				if (stateEvent.recurringInfo && stateEvent.recurringInfo.id === recurringID) {
+					let modifiedEvent = this.cloneEvent(stateEvent);
+					modifiedEvent.title = title;
+					modifiedEvent.description = description;
+					modifiedEvent.groups = groups;
+					modifiedEvent.color = color;
+					eventMap.set(stateEvent.id, modifiedEvent);
+				}
+			});
+
+			this.setState({ events: eventMap });
+		}
+	}
+
+	addPendingOverrideToEntireRecurringEvent = (event: Event): Map<number, Event> => {
+		let eventMap = this.cloneStateEvents();
+		if (event.recurringInfo) {
+			let recurringID = event.recurringInfo.id;
+			let events = this.getStateEventsAsArray().forEach(stateEvent => {
+				if (stateEvent.recurringInfo && stateEvent.recurringInfo.id === recurringID) {
+					let modifiedEvent = this.cloneEvent(stateEvent);
+					modifiedEvent.pendingOverride = true;
+					eventMap.set(stateEvent.id, modifiedEvent);
+				}
+			});
+		}
+
+		return eventMap;
+	}
+
+	handleEventDeletion = (eventID: number, deleteAllRecurring: boolean = false) => {
+		let events = this.cloneStateEvents();
+		let eventToDelete = events.get(eventID);
+		if (eventToDelete && eventToDelete.recurringInfo && deleteAllRecurring)
+			this.deleteEntireRecurringEvent(eventToDelete);
+		else {
+			events.delete(eventID);
 			this.setState({ events: events });
 		}
 	}
 
-	handleEventDeletion = (eventID: number) => {
-		let events = this.cloneStateEvents();
-		events.delete(eventID);
-		this.setState({ events: events });
+	deleteEntireRecurringEvent = (event: Event) => {
+		if (event.recurringInfo) {
+			let recurringID = event.recurringInfo.id;
+			let eventMap = this.cloneStateEvents();
+			let events = this.getStateEventsAsArray().forEach(stateEvent => {
+				if (stateEvent.recurringInfo && stateEvent.recurringInfo.id === recurringID)
+					eventMap.delete(stateEvent.id);
+			});
+
+			this.setState({ events: eventMap });
+		}
 	}
 
 	handleEventClick = (event: any, jsEvent: any, view: any) => {
 		let events = this.cloneStateEvents();
 		let clickedEvent: Event | undefined = events.get(event.id);
+		if (clickedEvent) {
+			let eventStartString = clickedEvent.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = clickedEvent.end;
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+			if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+				this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
+				return;
+			}
+		}
+
 		if (clickedEvent && Number(clickedEvent.cwid) === Number(this.props.cwid) || clickedEvent && this.props.role === 'administrator')
 			this.openEditEventModal(clickedEvent.id, clickedEvent.title, clickedEvent.description, clickedEvent.groups, clickedEvent.recurringInfo);
 		else if (clickedEvent)
@@ -512,10 +851,12 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			this.unownedEventModal.beginEdit(event);
 	}
 
-	handleOverrideRequest = (eventID: number) => {
+	handleOverrideRequest = (eventID: number, overrideRecurring: boolean) => {
 		let events: Map<number, Event> = this.cloneStateEvents();
 		let eventWithRequest: Event | undefined = events.get(eventID);
 		if (eventWithRequest) {
+			if (overrideRecurring)
+				events = this.addPendingOverrideToEntireRecurringEvent(eventWithRequest);
 			eventWithRequest.pendingOverride = true;
 			events.set(eventID, eventWithRequest);
 			this.setState({ events: events });
@@ -527,21 +868,99 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	// Client Events //////////////////////////////////////////////////////////////////////////////////////////////
 	public getStateFromDB(room: string = this.props.room, location: string = this.props.location): void {
 		this.setState({ loading: true });
-		let queryData: {} = {
-			where: {
-				RoomName: room,
-				LocationName: location
-			}
-		};
-		let queryDataString = JSON.stringify(queryData);
-		request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (res && res.body) {
-				let events = this.parseDBEvents(res.body);
-				this.eventCache = this.parseDBEvents(res.body);
+		Promise.all([this.getEventsFromDB(room, location), this.getPublishDatesFromAPI()]).then((data) => {
+			let events: Map<number, Event> = data[0];
+			let publishdates: { start: string, end: string, locked: boolean } = data[1];
+			let publishStart = publishdates.locked ? moment(publishdates.start).utc(true) : moment('08-05-1985');
+			let publishEnd = publishdates.locked ? moment(publishdates.end).utc(true) : moment('08-05-1985');
 
-				this.setState({ events: events, loading: false });
+			this.setState({
+				events: events,
+				publishPeriodStart: publishStart,
+				publishPeriodEnd: publishEnd,
+				loading: false
+			});
+		}).catch(() => {
+			// TODO: handle error
+		});
+	}
+
+	getEventsFromDB = (room: string, location: string): Promise<Map<number, Event>> => {
+		return new Promise((resolved, reject) => {
+			let queryData: {} = {
+				where: {
+					RoomName: room,
+					LocationName: location
+				}
+			};
+			let queryDataString = JSON.stringify(queryData);
+			request.get('/api/eventswithrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
+				if (res && res.body) {
+					let events = this.parseDBEvents(res.body);
+
+					request.get('/api/recurringeventrelations').set('queryData', queryDataString).end((recError: {}, recRes: any) => {
+						if (recRes && recRes.body) {
+							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
+							this.eventCache = eventsWithRecurringInfo;
+							resolved(eventsWithRecurringInfo);
+						} else
+							reject();
+					});
+				} else
+					reject();
+			});
+		});
+	}
+
+	getPublishDatesFromAPI = (): Promise<{ start: string, end: string, locked: boolean }> => {
+		return new Promise((resolved, reject) => {
+			request.get('/api/publishdates').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolved({ start: res.body.Start, end: res.body.End, locked: res.body.Locked });
+				else
+					reject();
+			});
+		});
+	}
+
+	applyRecurringInfoToEvents = (events: Map<number, Event>, recurringBody: any[]): Map<number, Event> => {
+
+		recurringBody.forEach(dbRecurringInfo => {
+			let recurringInfo: RecurringEventInfo = {
+				id: dbRecurringInfo.RecurringID,
+				type: dbRecurringInfo.RecurringType,
+				monthlyDay: dbRecurringInfo.MonthlyWeekday || undefined,
+				weeklyDays: dbRecurringInfo.WeeklyDays || undefined,
+				startDate: moment(dbRecurringInfo.StartDate),
+				endDate: moment(dbRecurringInfo.EndDate)
+			};
+
+			let event = events.get(Number(dbRecurringInfo.EventID));
+			if (event) {
+				event.recurringInfo = recurringInfo;
+				events.set(event.id, event);
 			}
 		});
+
+		let recurringIDsWithPendingOverrideRequests = new Set();
+		for (let event of Array.from(events.values())) {
+			if (event.overrideRecurring && event.recurringInfo)
+				recurringIDsWithPendingOverrideRequests.add(event.recurringInfo.id);
+		}
+
+		let eventsToAddPendingOverrideTo: Event[] = [];
+		events.forEach(event => {
+			if (event.recurringInfo && recurringIDsWithPendingOverrideRequests.has(event.recurringInfo.id)) {
+				eventsToAddPendingOverrideTo.push(event);
+			}
+		});
+
+		eventsToAddPendingOverrideTo.forEach(event => {
+			event.pendingOverride = true;
+			events.set(event.id, event);
+		});
+
+		return events;
 	}
 
 	cloneStateEvents = (): Map<number, Event> => {
@@ -587,13 +1006,24 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	editEvent(event: Event, delta: Duration): void {
-		if (event.recurringInfo && !confirm('This is a recurring event. Do you want to continue this action and make the event independent?')) {
+		let eventStartString = event.start;
+		if (eventStartString.length < 20)
+			eventStartString += '.000Z';
+		let eventEndString = event.end;
+		if (eventEndString.length < 20)
+			eventEndString += '.000Z';
+		let eventStart = moment(eventStartString).utc();
+		let eventEnd = moment(eventEndString).utc();
+		if (eventEnd.isAfter(this.state.publishPeriodStart) && eventStart.isBefore(this.state.publishPeriodEnd) && this.props.role !== 'administrator') {
+			this.props.handleShowAlert('error', 'Only administrators can schedule during the publish period.');
 			this.forceUpdate();
 			return;
 		}
 
-		if (event.recurringInfo)
-			alert(event.recurringInfo.id);
+		if (event.recurringInfo && !confirm('This is a recurring event. Do you want to continue this action and make the event independent?')) {
+			this.forceUpdate();
+			return;
+		}
 		// prevent event from being edited to less than 30 minutes in duration
 		let start: Moment = moment(event.start);
 		let end: Moment = moment(event.end);
@@ -619,6 +1049,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	parseDBEvents(body: any): Map<number, Event> {
 		let parsedEvents: Map<number, Event> = new Map();
+
 		for (let event of body) {
 			let userOwnsEvent: boolean = Number(event.CWID) === Number(this.props.cwid) || this.props.role === 'administrator';
 			let color = '#800029';
@@ -652,6 +1083,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				editable: userOwnsEvent
 			};
 
+			if (event.RecurringOverrideRequest && event.RecurringOverrideRequest === 1)
+				parsedEvent.overrideRecurring = true;
+
 			parsedEvents.set(event.EventID, parsedEvent);
 		}
 
@@ -671,56 +1105,140 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			event1.title === event2.title);
 	}
 
+	eventsAreEqualExcludingOverride(event1?: Event, event2?: Event): boolean {
+		return (event1 !== undefined && event2 !== undefined &&
+			event1.cwid === event2.cwid &&
+			event1.description === event2.description &&
+			event1.end === event2.end &&
+			event1.groups.join() === event2.groups.join() &&
+			event1.id === event2.id &&
+			event1.ownerName === event2.ownerName &&
+			event1.start === event2.start &&
+			event1.title === event2.title);
+	}
+
 	// Event Persistence /////////////////////////////////////////////////////////////////////////////////////////////////
 	persistStateToDB(): void {
+		this.props.handleToolbarText('Submitting data, please wait.', 'info');
+		this.forceUpdate();
+		this.setState({ loading: true });
 		let persistPromises: Promise<any>[] = [];
 		persistPromises.push(this.deleteDBEventsNotInClient());
 
-		persistPromises.push(new Promise((resolve, reject) => {
+		persistPromises.push(new Promise((resolved, reject) => {
 			this.getClientEventIDsThatAreAlreadyInDB().then((eventIDsInDB) => {
 				this.sendNotificationsToOwnersIfModifiedByNonOwner(eventIDsInDB);
-				this.updateExistingEventsInDB(eventIDsInDB).then(() => {
+
+				let persistNewEventsThenRecurringEvents = new Promise((res, rej) => {
 					let eventsNotInDB = this.getClientEventsNotYetInDB(eventIDsInDB);
-					this.persistNewEventsToDB(eventsNotInDB).then(() => resolve()).catch(() => reject());
-				}).catch(() => reject());
+
+					console.log('events not yet in DB!!-------------------------------');
+					console.log(eventsNotInDB);
+
+					this.persistNewEventsToDB(eventsNotInDB).then(() => {
+						this.persistRecurringEvents().then(() => {
+							res();
+						}).catch(() => {
+							rej();
+						});
+					}).catch(() => {
+						rej();
+					});
+				});
+
+				let promises: Promise<any>[] = [
+					this.updateExistingEventsInDB(eventIDsInDB),
+					persistNewEventsThenRecurringEvents
+				];
+
+				Promise.all(promises).then(() => {
+					resolved();
+				}).catch(() => {
+					reject();
+				});
 			}).catch(() => reject());
 		}));
 
 		Promise.all(persistPromises).then(() => {
+			this.props.handleToolbarReset();
+			this.forceUpdate();
 			this.props.handleToolbarMessage('Changes saved successfully!', 'success');
 			this.eventCache = this.cloneStateEvents();
+			this.setState({ loading: false });
 		}).catch(() => {
 			this.props.handleToolbarMessage('Error saving data.', 'error');
 		});
 	}
 
 	getClientEventIDsThatAreAlreadyInDB(): Promise<number[]> {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolved, reject) => {
 			let ids: number[] = Array.from(this.state.events.keys());
 
-			let queryData = {
-				fields: ['EventID'], where: {
-					EventID: ids,
-					LocationName: this.props.location,
-					RoomName: this.props.room
-				}
-			};
-			let queryDataString = JSON.stringify(queryData);
-			let stateEventsThatAreAlreadyInDB: number[] = [];
-			request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-				if (res && res.body)
-					resolve(this.getEventIdsFromResponseBody(res.body));
-				else
-					reject();
+			let promises = [];
+			while (ids.length > 0) {
+				let idPart = ids.slice(0, 500);
+				ids.splice(0, 500);
+
+				let queryData = {
+					fields: ['EventID'], where: {
+						EventID: idPart,
+						LocationName: this.props.location,
+						RoomName: this.props.room
+					}
+				};
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryData);
+					console.log('calling get client event ids');
+					request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+						if (res && res.body)
+							resAPI(this.getEventIdsFromResponseBody(res.body));
+						else {
+							console.log('getClientEventIDsThatAreAlreadyInDB new Thing failed rejapi');
+							rejAPI();
+						}
+					});
+				}));
+			}
+
+			Promise.all(promises).then((data) => {
+				let eventIDsThatAreAlreadyInDB: number[] = [];
+				data.forEach((datum: number[]) => {
+					eventIDsThatAreAlreadyInDB = eventIDsThatAreAlreadyInDB.concat(datum);
+				});
+				console.log('Finished Getting eventids already in DB.................................');
+				console.log(eventIDsThatAreAlreadyInDB);
+				resolved(eventIDsThatAreAlreadyInDB);
+			}).catch(() => {
+				console.log('getClientEventIDsThatAreAlreadyInDB failed bottom catch');
+				reject();
 			});
+
+			// let queryData = {
+			// 	fields: ['EventID'], where: {
+			// 		EventID: ids,
+			// 		LocationName: this.props.location,
+			// 		RoomName: this.props.room
+			// 	}
+			// };
+			// let queryDataString = JSON.stringify(queryData);
+			// let stateEventsThatAreAlreadyInDB: number[] = [];
+			// request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+			// 	if (res && res.body)
+			// 		resolved(this.getEventIdsFromResponseBody(res.body));
+			// 	else {
+			// 		console.log('getClientEventIDsThatAreAlreadyInDB failed');
+			// 		reject();
+			// 	}
+			// });
 		});
 	}
 
 	deleteDBEventsNotInClient(): Promise<any> {
 		return new Promise((resolveOuter, rejectOuter) => {
-			new Promise((resolve, reject) => {
+			new Promise((resolved, reject) => {
 				let queryData = {
-					fields: 'EventID', where: {
+					fields: 'EventID',
+					where: {
 						LocationName: this.props.location,
 						RoomName: this.props.room
 					}
@@ -728,7 +1246,11 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				let queryDataString = JSON.stringify(queryData);
 				request.get('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 					if (res && res.body)
-						resolve(res.body.map((event: any) => { return Number(event.EventID); }));
+						resolved(res.body.map((event: any) => { return Number(event.EventID); }));
+					else {
+						console.log('deleteDBEventsNotInClient failed');
+						reject();
+					}
 				});
 			}).then((allDBEventIDsForRoom: number[]) => {
 				let clientEventIDs: number[] = Array.from(this.state.events.keys()).map(id => { return Number(id); });
@@ -761,12 +1283,17 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 						if (res && res.body) {
 							this.logEventDeletions(eventsIDsToDelete);
 							resolveOuter();
-						} else
+						} else {
+							console.log('deleteDBEventsNotInClient failed rejectouter');
 							rejectOuter();
+						}
 					});
 				} else
 					resolveOuter();
-			}).catch(() => rejectOuter());
+			}).catch(() => {
+				console.log('deleteDBEventsNotInClient failed rejectouter bottom catch');
+				rejectOuter();
+			});
 		});
 	}
 
@@ -775,7 +1302,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		this.state.events.forEach(event => {
 			if (eventIDsInDB.includes(event.id) &&
 				Number(event.cwid) !== Number(this.props.cwid) &&
-				!this.eventsAreEqual(this.eventCache.get(event.id), event))
+				!this.eventsAreEqualExcludingOverride(this.eventCache.get(event.id), event))
 				unownedEvents.push(event);
 		});
 
@@ -796,7 +1323,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	updateExistingEventsInDB(eventIDsInDB: number[]): Promise<void> {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolved, reject) => {
 			let eventsToUpdate: Event[] = [];
 			eventIDsInDB.forEach((id) => {
 				let eventToUpdate = this.state.events.get(id);
@@ -822,15 +1349,48 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				});
 			});
 
-			let queryDataString = JSON.stringify(queryData);
-			request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-				if (res && res.body) {
-					this.logEventUpdates(eventsToUpdate);
-					resolve();
-				} else
-					reject();
+			let promises = [];
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 15);
+				queryData.splice(0, 15);
+
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryDataPart);
+					request.post('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+						if (res && res.body) {
+							resAPI();
+						} else {
+							console.log('updateExistingEventsInDB failed rejapi');
+							rejAPI();
+						}
+					});
+				}));
+			}
+
+			Promise.all(promises).then(() => {
+				let eventsToLog = this.exludeDuplicateRecurringEvents(eventsToUpdate);
+				this.logEventUpdates(eventsToLog);
+
+				resolved();
+			}).catch(() => {
+				console.log('updateExistingEventsInDB failed bottom catch');
+				reject();
 			});
 		});
+	}
+
+	exludeDuplicateRecurringEvents = (events: Event[]) => {
+		let recurringIDs = new Set();
+		let singularRecurringEvents: Event[] = [];
+		let eventsToLog = events.filter(event => {
+			if (event.recurringInfo && !recurringIDs.has(event.recurringInfo.id)) {
+				recurringIDs.add(event.recurringInfo.id);
+				singularRecurringEvents.push(event);
+			}
+			return event.recurringInfo === undefined;
+		});
+
+		return eventsToLog.concat(singularRecurringEvents);
 	}
 
 	getClientEventsNotYetInDB(alreadyInDB: number[]): Event[] {
@@ -844,17 +1404,16 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	persistNewEventsToDB(events: Event[]): Promise<any> {
-		return new Promise((resolveOuter, rejectOuter) => {
+		return new Promise((resolved, reject) => {
 			let eventsToCreate: Event[] = [];
 			events.forEach(event => {
 				eventsToCreate.push(event);
 			});
 
-			let persistNewEventsPromises: Promise<any>[] = [];
-
+			let queryData: {}[] = [];
 			eventsToCreate.forEach((event) => {
-				persistNewEventsPromises.push(new Promise((resolve, reject) => {
-					let insertValues: {} = {
+				queryData.push({
+					insertValues: {
 						'CWID': this.props.cwid,
 						'EventID': event.id,
 						'LocationName': this.props.location,
@@ -863,24 +1422,45 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 						'Description': event.description,
 						'StartTime': event.start,
 						'EndTime': event.end
-					};
-
-					let queryData = {
-						groups: event.groups,
-						insertValues: insertValues
-					};
-					let queryDataString = JSON.stringify(queryData);
-					request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
-						if (res && res.body) {
-							this.logEventCreations([event]);
-							resolve();
-						} else
-							reject();
-					});
-				}));
+					},
+					groups: event.groups
+				});
 			});
 
-			Promise.all(persistNewEventsPromises).then(() => resolveOuter()).catch(() => rejectOuter());
+			if (queryData.length <= 0) {
+				resolved();
+				return;
+			}
+
+			let promises = [];
+			while (queryData.length > 0) {
+				let queryDataPart = queryData.slice(0, 10);
+				queryData.splice(0, 10);
+
+				promises.push(new Promise((resAPI, rejAPI) => {
+					let queryDataString = JSON.stringify(queryDataPart);
+					request.put('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
+						if (res && res.body)
+							resAPI();
+						else {
+							console.log('persistNewEventsToDB failed rejAPI');
+							console.log(error);
+							console.log(res);
+							console.log(queryDataPart);
+							rejAPI();
+						}
+					});
+				}));
+			}
+
+			Promise.all(promises).then(() => {
+				let eventsToLog = this.exludeDuplicateRecurringEvents(eventsToCreate);
+				this.logEventCreations(eventsToLog);
+				resolved();
+			}).catch(() => {
+				console.log('persistNewEventsToDB failed bottom catch reject');
+				reject();
+			});
 		});
 	}
 
@@ -895,13 +1475,13 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	// Groups ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	populateGroupSemesterMap = (): Promise<null> => {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolved, reject) => {
 			request.get('/api/semestergroups').end((error: {}, res: any) => {
 				if (res && res.body) {
 					res.body.forEach((result: any) => {
 						this.groupSemesterMap.set(result.GroupName, result.Semester);
 					});
-					resolve();
+					resolved();
 				} else
 					reject();
 			});
@@ -909,7 +1489,34 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	// Store Calendar State /////////////////////////////////////////////////////////////////////////////////////////////////////////
-	cacheViewAndDate(view: any) {
+	cacheViewAndDate(view: any, element: any) {
+		let pps = this.state.publishPeriodStart;
+		let ppe = this.state.publishPeriodEnd;
+		let loading = this.state.loading;
+		let role = this.props.role;
+
+		element.find('th.fc-day-header.fc-widget-header').each(function () {
+			// @ts-ignore
+			var theDate = moment($(this).data('date')); /* th.data-date="YYYY-MM-DD" */
+			// @ts-ignore
+			$(this).html(buildDateColumnHeader(theDate));
+		});
+
+		function buildDateColumnHeader(theDate: any) {
+			var container = document.createElement('div');
+			var Date = document.createElement('div');
+			Date.textContent = theDate.format('ddd') + ' ' + theDate.format('M/DD');
+			container.appendChild(Date);
+			let d = moment(theDate);
+
+			if (d.isAfter(pps) && d.isBefore(ppe) && !loading && role !== 'administrator') {
+				container.style.color = '#dc3545';
+				container.style.borderBottom = 'solid 1px';
+				container.style.borderColor = '#dc3545';
+			}
+			return container;
+		}
+
 		this.currentView = view.name;
 		if (!this.currentDate)
 			this.currentDate = view.intervalStart;
@@ -1007,8 +1614,14 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			});
 		});
 
-		let queryDataString = JSON.stringify(queryData);
-		request.put('/api/logs').set('queryData', queryDataString).end();
+		while (queryData.length > 0) {
+			let queryDataPart = queryData.slice(0, 10);
+			queryData.splice(0, 10);
+
+			let queryDataString = JSON.stringify(queryDataPart);
+			request.put('/api/logs').set('queryData', queryDataString).end();
+		}
+
 	}
 }
 

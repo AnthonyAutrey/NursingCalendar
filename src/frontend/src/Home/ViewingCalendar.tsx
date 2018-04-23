@@ -1,9 +1,11 @@
 import * as React from 'react';
 import { UnownedEventModal } from '../Scheduler/UnownedEventModal';
+import { RecurringEventInfo } from '../Utilities/RecurringEvents';
 import { ViewEventModal } from './ViewEventModal';
 import { Loading } from '../Generic/Loading';
 import { ColorGenerator } from '../Utilities/Colors';
 const request = require('superagent');
+import * as moment from 'moment';
 const FullCalendarReact = require('fullcalendar-reactwrapper');
 
 interface Props {
@@ -37,6 +39,7 @@ export interface Event {
 	location: string;
 	room: string;
 	groups: string[];
+	recurringInfo?: RecurringEventInfo;
 	color?: string;
 }
 
@@ -212,6 +215,27 @@ export class ViewingCalendar extends React.Component<Props, State> {
 					reject();
 			});
 		}).then((userGroups: any) => {
+			Promise.all([this.getEventsFromDB(userGroups), this.getPublishDatesFromAPI()]).then((data) => {
+				let events: Event[] = data[0];
+				let publishdates: { start: string, end: string } = data[1];
+
+				if (this.props.role === 'student')
+					events = this.filterEventsByPublishPeriod(events, moment(publishdates.start).utc(true), moment(publishdates.end).utc(true).add(1, 'days'));
+
+				this.setState({ events: events, loading: false });
+			}).catch(() => {
+				// TODO: handle error
+			});
+		}).catch(() => {
+			alert('error, couldn\'t get events!');
+			// TODO: Handle Failure
+		});
+
+		return groups;
+	}
+
+	getEventsFromDB = (userGroups: any): Promise<Event[]> => {
+		return new Promise((resolve, reject) => {
 			let eventQueryData = {
 				where: {
 					GroupName: userGroups.map((group: any) => {
@@ -221,16 +245,72 @@ export class ViewingCalendar extends React.Component<Props, State> {
 			};
 			let eventQueryDataString = JSON.stringify(eventQueryData);
 			request.get('/api/eventswithrelations').set('queryData', eventQueryDataString).end((error: {}, res: any) => {
-				if (res && res.body)
-					this.setState({ events: this.parseDBEvents(res.body), loading: false });
+				if (res && res.body) {
+					request.get('/api/recurringeventrelations').end((recError: {}, recRes: any) => {
+						if (recRes && recRes.body) {
+							let events = this.parseDBEvents(res.body);
+							let eventsWithRecurringInfo = this.applyRecurringInfoToEvents(events, recRes.body);
+							resolve(eventsWithRecurringInfo);
+						} else
+							reject();
+					});
+				}
 			});
+		});
+	}
 
-		}).catch(() => {
-			alert('error, couldn\'t get events!');
-			// TODO: Handle Failure
+	getPublishDatesFromAPI = (): Promise<{ start: string, end: string }> => {
+		return new Promise((resolve, reject) => {
+			request.get('/api/publishdates').end((error: {}, res: any) => {
+				if (res && res.body)
+					resolve({ start: res.body.Start, end: res.body.End });
+				else
+					reject();
+			});
+		});
+	}
+
+	filterEventsByPublishPeriod = (events: Event[], publishPeriodStart: moment.Moment, publishPeriodEnd: moment.Moment): Event[] => {
+		return events.filter(event => {
+
+			let eventStartString = event.start;
+			if (eventStartString.length < 20)
+				eventStartString += '.000Z';
+			let eventEndString = event.end || '';
+			if (eventEndString.length < 20)
+				eventEndString += '.000Z';
+			let eventStart = moment(eventStartString).utc();
+			let eventEnd = moment(eventEndString).utc();
+
+			if (eventEnd.isAfter(publishPeriodStart) && eventStart.isBefore(publishPeriodEnd))
+				return true;
+			else
+				return false;
+		});
+	}
+
+	applyRecurringInfoToEvents = (events: Event[], recurringBody: any[]): Event[] => {
+
+		let eventRecurringInfoMap = new Map<string, RecurringEventInfo>();
+		recurringBody.forEach(dbRecurringInfo => {
+			let recurringInfo: RecurringEventInfo = {
+				id: dbRecurringInfo.RecurringID,
+				type: dbRecurringInfo.RecurringType,
+				monthlyDay: dbRecurringInfo.MonthlyWeekday || undefined,
+				weeklyDays: dbRecurringInfo.WeeklyDays || undefined,
+				startDate: moment(dbRecurringInfo.StartDate),
+				endDate: moment(dbRecurringInfo.EndDate)
+			};
+
+			eventRecurringInfoMap.set(dbRecurringInfo.EventID + dbRecurringInfo.LocationName + dbRecurringInfo.RoomName, recurringInfo);
 		});
 
-		return groups;
+		events.forEach(event => {
+			if (eventRecurringInfoMap.has(event.id + event.location + event.room))
+				event.recurringInfo = eventRecurringInfoMap.get(event.id + event.location + event.room);
+		});
+
+		return events;
 	}
 
 	parseDBEvents(body: any): Event[] {

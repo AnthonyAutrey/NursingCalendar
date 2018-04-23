@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import { Login } from './Login/Login';
 import { NavigationBar } from './Navigation/NavigationBar';
 import { Scheduler } from './Scheduler/Scheduler';
@@ -69,16 +69,16 @@ class App extends React.Component<{}, State> {
 		});
 	}
 
-	handleLogin = () => {
-		this.getSession();
-		this.forceUpdate();
+	handleLogin = (cwid: number, role: string, firstName: string, lastName: string) => {
+		this.setState({ sessionRetreived: true, cwid: cwid, role: role, name: firstName + ' ' + lastName });
 	}
 
 	handleLogout = () => {
 		request.get('/api/logout').end((error: {}, res: any) => {
-			this.setState({ cwid: undefined, role: undefined }, () => {
-				return <Redirect to="/" />;
-			});
+			if (res && res.body)
+				location.reload();
+			else
+				this.handleShowAlert('error', 'Error logging out.');
 		});
 	}
 
@@ -103,7 +103,12 @@ class App extends React.Component<{}, State> {
 			routes.push(
 				(
 					<Route key="/schedule" path="/schedule" >
-						<Scheduler handleActiveRouteChange={this.handleActiveRouteChange} cwid={this.state.cwid || 0} role={this.state.role || ''} />
+						<Scheduler
+							handleActiveRouteChange={this.handleActiveRouteChange}
+							cwid={this.state.cwid || 0}
+							role={this.state.role || ''}
+							handleShowAlert={this.handleShowAlert}
+						/>
 					</Route>
 				)
 			);

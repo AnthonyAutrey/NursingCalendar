@@ -42,7 +42,8 @@ $app->get('/overriderequests/{id}', function (Request $request, Response $respon
 
 	$tableString = 'OverrideRequests NATURAL JOIN events '.
 		'NATURAL JOIN (SELECT CWID as RequestorCWID, FirstName as RequestorFirstName, LastName as RequestorLastName from Users) reqUser '.
-		'NATURAL JOIN (SELECT CWID, FirstName as OwnerFirstName, LastName as OwnerLastName from Users) ownerUser ';
+		'NATURAL JOIN (SELECT CWID, FirstName as OwnerFirstName, LastName as OwnerLastName from Users) ownerUser '.
+		'NATURAL LEFT JOIN RecurringEventRelation';
 	$queryString = DBUtil::buildSelectQuery($tableString, $queryData['fields'], $queryData['where']);
 	$overrideRequests = DBUtil::runQuery($queryString);
 	$response->getBody()->write($overrideRequests);
@@ -54,7 +55,8 @@ $app->get('/overriderequests', function (Request $request, Response $response, a
 	$queryData = getSelectQueryData($request);
 	$tableString = 'OverrideRequests NATURAL JOIN events '.
 		'NATURAL JOIN (SELECT CWID as RequestorCWID, FirstName as RequestorFirstName, LastName as RequestorLastName from Users) reqUser '.
-		'NATURAL JOIN (SELECT CWID, FirstName as OwnerFirstName, LastName as OwnerLastName from Users) ownerUser ';
+		'NATURAL JOIN (SELECT CWID, FirstName as OwnerFirstName, LastName as OwnerLastName from Users) ownerUser '.
+		'NATURAL LEFT JOIN RecurringEventRelation';
 	$queryString = DBUtil::buildSelectQuery($tableString, $queryData['fields'], $queryData['where']);
 	$overrideRequests = DBUtil::runQuery($queryString);
 	$response->getBody()->write($overrideRequests);

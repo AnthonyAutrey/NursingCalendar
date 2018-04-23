@@ -99,7 +99,7 @@ export class CreateEventModal extends React.Component<Props, State> {
 			</div>
 		);
 
-		if (this.props.groupOptionsFromAPI.length === this.state.groups.length)
+		if (this.props.groupOptionsFromAPI.length === this.state.groups.length || this.state.groups.length >= 7)
 			addButton = null;
 
 		let repeatMenu = null;
@@ -114,7 +114,7 @@ export class CreateEventModal extends React.Component<Props, State> {
 			);
 
 		return (
-			<div onKeyPress={this.handleKeyPress} style={backdropStyle}>
+			<div style={backdropStyle}>
 				<div className="modal-dialog" role="document">
 					<div className="modal-content">
 						<div className="modal-header">
@@ -190,7 +190,8 @@ export class CreateEventModal extends React.Component<Props, State> {
 	}
 
 	handleTitleChange = (event: any) => {
-		this.setState({ title: event.target.value });
+		if (event.target.value.length <= 60)
+			this.setState({ title: event.target.value });
 	}
 
 	handleDescriptionChange = (event: any) => {
@@ -223,11 +224,6 @@ export class CreateEventModal extends React.Component<Props, State> {
 		}
 	}
 
-	handleKeyPress = (event: any) => {
-		if (event.key === 'Enter')
-			this.save();
-	}
-
 	close = () => {
 		this.resetFields();
 		this.props.closeHandler();
@@ -258,6 +254,11 @@ export class CreateEventModal extends React.Component<Props, State> {
 	}
 
 	repeatEndDateIsValid = (): boolean => {
+		if (!moment(this.state.repeatEndDate).isValid()) {
+			alert('The selected \'Repeat Until\' date is invalid.');
+			return false;
+		}
+
 		if (this.state.repeatType === 'monthly') {
 			let firstMonthlyRepeatDate = this.getFirstMonthlyRepeatDate();
 			if (!firstMonthlyRepeatDate &&
@@ -267,13 +268,12 @@ export class CreateEventModal extends React.Component<Props, State> {
 		}
 
 		let repeatEndDate = moment(this.state.repeatEndDate);
-		if (this.state.repeatType === 'daily' || this.state.repeatType === 'weekly') {
+		if (this.state.repeatType === 'daily' || this.state.repeatType === 'weekly')
 			if ((this.state.eventStart.format('YYYY-MM-DD') === repeatEndDate.format('YYYY-MM-DD') ||
 				repeatEndDate.isBefore(this.state.eventStart)) &&
 				!confirm('The \'Repeat Until\' date occurs before the event\'s next repeat date.' +
 					' This means that the event will not repeat. Do you want to continue?'))
 				return false;
-		}
 
 		return true;
 	}
