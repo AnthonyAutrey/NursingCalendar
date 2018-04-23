@@ -31,7 +31,8 @@ $app->put('/rooms', function (Request $request, Response $response, array $args)
 // Read //
 $app->get('/rooms', function (Request $request, Response $response, array $args) {
 	$queryData = getSelectQueryData($request);
-	$queryString = DBUtil::buildSelectQuery('rooms natural left outer join roomResourceRelation', $queryData['fields'], $queryData['where']);
+	$queryString = DBUtil::buildSelectQuery('rooms natural left outer join roomResourceRelation '.
+		'natural left outer join Resources', $queryData['fields'], $queryData['where']);
 	$rooms = DBUtil::runQuery($queryString);
 	$response->getBody()->write($rooms);
 	$response = $response->withHeader('Content-type', 'application/json');
