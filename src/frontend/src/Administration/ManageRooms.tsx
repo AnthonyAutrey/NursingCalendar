@@ -673,7 +673,7 @@ export class ManageRooms extends React.Component<Props, State> {
 		});
 	}
 
-	createLocationsInDB = (locations: Location[]) => {
+	createRoomsInDB = (rooms: Room[]) => {
 		return true;
 	}
 
