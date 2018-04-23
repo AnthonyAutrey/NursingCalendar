@@ -104,9 +104,9 @@ $app->put('/roomresources', function (Request $request, Response $response, arra
 		}
 
 		$queryString = DBUtil::buildInsertQuery('RoomResourceRelation', $queryData['insertValues']);
-		$results[$queryData['insertValues']] = DBUtil::runCommand($queryString);
+		array_push($results, DBUtil::runCommand($queryString));
 	}
-	$response->getBody()->write($results);
+	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 })->add($requireAdmin);
