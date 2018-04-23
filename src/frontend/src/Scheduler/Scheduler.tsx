@@ -107,9 +107,6 @@ export class Scheduler extends React.Component<Props, State> {
 		let selectedRoomName = this.lastSelectedRoom.roomName;
 		let selectedLocationName = this.lastSelectedRoom.locationName;
 
-		console.log('going to: ');
-		console.log(selectedRoomName);
-
 		return (
 			<div>
 				<div className="Scheduler container-fluid">

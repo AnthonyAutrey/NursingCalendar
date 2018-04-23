@@ -14,6 +14,8 @@ require '../../src/api/middleware/Authenticator.php';
 $config = [
     'settings' => [
 		'displayErrorDetails' => false,
+		'addContentLengthHeader' => false,
+		'routerCacheFile' => '../../src/api/config/routes.cache.php',
 	],
 	'devEnvironment' => true
 ];
@@ -24,7 +26,9 @@ $app = new \Slim\App($config);
 
 $app->add(function ($request, $response, $next) {
 	session_start();
-	return $next($request, $response);	
+	$response = $next($request, $response);	
+	session_write_close();
+	return $response;
 });
 
 // Authentication Middleware /////////////////////////////////////////////////////////////////////////////////////////////
