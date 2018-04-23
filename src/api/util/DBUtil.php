@@ -5,7 +5,7 @@ require '../../src/api/config/DBConfig.php';
 class DBUtil {
 
 	// Query Execution ////////////////////////////////////////////////////////////////////////////////////////////
-	public static function runCommand($query): String {
+	public static function runCommand($query) {
 		try {
 			$db = new DBConfig();
 			$db = $db->connect();
@@ -23,7 +23,7 @@ class DBUtil {
 		}
 	}
 
-	public static function runQuery($query): String {
+	public static function runQuery($query) {
 		try {
 			$db = new DBConfig();
 			$db = $db->connect();

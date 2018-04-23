@@ -510,7 +510,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			if (recurringEvent.end.length < 20)
 				recurringEvent.end += '.000Z';
 			let recurringEventStart = moment(recurringEvent.start).utc().add(15, 'minutes');
-			let recurringEventEnd = moment(recurringEvent.end).utc().add(-15, 'minutes');
+			let recurringEventEnd = moment(recurringEvent.end).utc();
 			let iterateDate = recurringEventStart.clone();
 
 			let noConflicts = true;
@@ -1477,8 +1477,8 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 			let promises = [];
 			while (queryData.length > 0) {
-				let queryDataPart = queryData.slice(0, 10);
-				queryData.splice(0, 10);
+				let queryDataPart = queryData.slice(0, 5);
+				queryData.splice(0, 5);
 
 				promises.push(new Promise((resAPI, rejAPI) => {
 					let queryDataString = JSON.stringify(queryDataPart);
@@ -1534,6 +1534,18 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	// Store Calendar State /////////////////////////////////////////////////////////////////////////////////////////////////////////
 	cacheViewAndDate(view: any, element: any) {
+		
+		this.currentView = view.name;
+		if (!this.currentDate)
+			this.currentDate = view.intervalStart;
+		if (this.currentDate.isBefore(view.intervalStart) || this.currentDate.isAfter(view.intervalEnd.subtract(1, 'minutes'))) {
+			this.currentDate = view.intervalStart;
+			this.smallestTimeInterval = view.intervalEnd - view.intervalStart;
+		}
+
+		if (view.name !== 'agendaWeek')
+			return;
+		
 		let pps = this.state.publishPeriodStart;
 		let ppe = this.state.publishPeriodEnd;
 		let loading = this.state.loading;
@@ -1559,14 +1571,6 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				container.style.borderColor = '#dc3545';
 			}
 			return container;
-		}
-
-		this.currentView = view.name;
-		if (!this.currentDate)
-			this.currentDate = view.intervalStart;
-		if (this.currentDate.isBefore(view.intervalStart) || this.currentDate.isAfter(view.intervalEnd.subtract(1, 'minutes'))) {
-			this.currentDate = view.intervalStart;
-			this.smallestTimeInterval = view.intervalEnd - view.intervalStart;
 		}
 	}
 
