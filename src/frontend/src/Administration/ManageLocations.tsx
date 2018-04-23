@@ -48,16 +48,15 @@ export class ManageLocations extends React.Component<Props, State> {
 							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
 							</button>
 							<hr />
+							<div className="row">
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+									Submit Changes
+							</button>
+							</div>
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
 						</div>
-					</div>
-					<hr />
-					<div className="row">
-						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
-							Submit Changes
-						</button>
-					</div>
-					<div className="form-group d-flex">
-						<div className="ml-auto" style={{ width: '120px !important' }} />
 					</div>
 					<hr />
 				</div>

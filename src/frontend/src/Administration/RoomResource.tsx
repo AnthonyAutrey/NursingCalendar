@@ -42,7 +42,7 @@ export class RoomResource extends React.Component<Props, State> {
 					</div>
 				</div>
 			);
-		else // TODO: If the room has more than one countable resource, the component disables the ability to change any count values. Talk to Tony
+		else
 			return (
 				<div className="d-flex row mb-3">
 					<div className="col d-flex">

@@ -53,16 +53,15 @@ export class ManageResources extends React.Component<Props, State> {
 							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
 							</button>
 							<hr />
+							<div className="row">
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+									Submit Changes
+								</button>
+							</div>
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
 						</div>
-					</div>
-					<hr />
-					<div className="row">
-						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
-							Submit Changes
-							</button>
-					</div>
-					<div className="form-group d-flex">
-						<div className="ml-auto" style={{ width: '120px !important' }} />
 					</div>
 					<hr />
 				</div>
@@ -128,14 +127,14 @@ export class ManageResources extends React.Component<Props, State> {
 										<span className=" oi oi-trash" />
 										<span>&nbsp;&nbsp;</span>
 										Delete Resource
-						</button>
+									</button>
 								</div>
 							</div>
 							<hr />
 							<div className="row">
 								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
 									Submit Changes
-							</button>
+								</button>
 							</div>
 							<div className="form-group d-flex">
 								<div className="ml-auto" style={{ width: '120px !important' }} />
@@ -348,6 +347,37 @@ export class ManageResources extends React.Component<Props, State> {
 				else
 					reject();
 			});
+		}).then(() => {
+			return new Promise((resolve, reject) => {
+				if (resources.length <= 0) {
+					resolve();
+					return;
+				}
+
+				let queryData: {}[] = [];
+				resources.forEach(resource => {
+					console.log(resource);
+					if (!(resource.isEnumerable > 0))
+						queryData.push(
+							{
+								setValues: {
+									Count: null
+								},
+								where: {
+									ResourceName: resource.name
+								}
+							});
+				});
+
+				let queryDataString = JSON.stringify(queryData);
+
+				request.post('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body)
+						resolve();
+					else
+						reject();
+				});
+			});
 		});
 	}
 
@@ -394,7 +424,9 @@ export class ManageResources extends React.Component<Props, State> {
 			resources[index].isEnumerable = 1;
 			resources[index].isEnumerableBoolean = true;
 		}
+
 		this.setState({ resources: resources, selectedResourceIsEnumerable: !this.state.selectedResourceIsEnumerable });
+
 	}
 
 	getSelectedResource = () => {

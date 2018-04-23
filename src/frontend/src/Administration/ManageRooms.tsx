@@ -117,28 +117,28 @@ export class ManageRooms extends React.Component<Props, State> {
 					<hr />
 					<div className="w-100 px-5">
 						<div className="card-body">
-							<div className="row">
-								<h4 className="card-title">Manage Rooms</h4>
-								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddRoom}>
-									Add Room &nbsp;&nbsp;
-									<span className="plusIcon oi oi-size-sm oi-plus" />
-								</button>
-							</div>
-							<hr />
-						</div>
-					</div>
-					<hr />
-					<div className="row">
-						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
-							Submit Changes
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Rooms</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddRoom}>
+								Add Room &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
 							</button>
-					</div>
-					<div className="form-group d-flex">
-						<div className="ml-auto" style={{ width: '120px !important' }} />
+							<hr />
+							<div className="row">
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={this.handlePersistChanges}>
+									Submit Changes
+							</button>
+							</div>
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
+						</div>
 					</div>
 					<hr />
 				</div>
 			);
+
+		console.log(this.state.rooms);
+		console.log(this.state.resources);
 
 		let roomOptions = this.state.rooms.map((room, index) => {
 			return (<option key={uuid()} value={index}>{room.locationName + ' - ' + room.roomName}</option>);
@@ -271,7 +271,7 @@ export class ManageRooms extends React.Component<Props, State> {
 			if (!roomlocationSet.has(dbRoomName + dbLocationName)) {
 				let resources: Resource[] = [];
 				if (dbRoom.ResourceName)
-					if (dbRoom.Count)
+					if (dbRoom.IsEnumerable > 0)
 						resources.push({ name: dbRoom.ResourceName, isEnumerable: true, count: dbRoom.Count });
 					else
 						resources.push({ name: dbRoom.ResourceName, isEnumerable: false });
@@ -294,7 +294,7 @@ export class ManageRooms extends React.Component<Props, State> {
 				parsedRooms.push(room);
 				parsedRoomIndex++;
 			} else
-				if (dbRoom.Count)
+				if (dbRoom.IsEnumerable && dbRoom.IsEnumerable > 0)
 					parsedRooms[parsedRoomIndex].resources.push({ name: dbRoom.ResourceName, count: dbRoom.Count, isEnumerable: true });
 				else
 					parsedRooms[parsedRoomIndex].resources.push({ name: dbRoom.ResourceName, isEnumerable: false });
