@@ -33,7 +33,6 @@ interface State {
 	locations: string[];
 	resources: Resource[];
 	initialized: boolean;
-	focusOnResourceCount: boolean;
 }
 
 export class ManageRooms extends React.Component<Props, State> {
@@ -44,8 +43,7 @@ export class ManageRooms extends React.Component<Props, State> {
 			selectedRoomIndex: 0,
 			locations: [],
 			resources: [],
-			initialized: false,
-			focusOnResourceCount: false
+			initialized: false
 		};
 	}
 
@@ -158,9 +156,6 @@ export class ManageRooms extends React.Component<Props, State> {
 				allPossibleResources={this.state.resources}
 				handleChangeResource={this.handleChangeResource}
 				handleChangeResourceCount={this.handleChangeResourceCount}
-				handleCountFocusIn={this.handleResourceCountFocusIn}
-				handleCountFocusOut={this.handleResourceCountFocusOut}
-				focusOnResourceCount={this.state.focusOnResourceCount}
 				handleAddResource={this.handleAddResource}
 				handleDeleteResource={this.handleDeleteResource}
 			/>);
@@ -487,15 +482,12 @@ export class ManageRooms extends React.Component<Props, State> {
 		}
 	}
 
-	handleChangeResourceCount = (event: any, index: number) => {
-		let resourceCount = Number(event.target.value);
-
-		let room: Room = this.state.rooms[this.state.selectedRoomIndex];
+	handleChangeResourceCount = (resourceCount: number, index: number) => {
+		console.log('handling change resource count in manageRooms');
+		let room = this.state.rooms[this.state.selectedRoomIndex];
 		let selectedResource = room.resources[index];
 		let rooms = this.state.rooms;
-
-		if (room && selectedResource && resourceCount && Number.isInteger(resourceCount)) {
-
+		if (room && selectedResource && resourceCount) {
 			room.resources[index].count = resourceCount;
 			rooms[this.state.selectedRoomIndex] = room;
 			this.setState({ rooms: rooms });
@@ -566,6 +558,7 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	handlePersistChanges = () => {
+		console.log('submitting changes');
 		if (!this.doValidityChecks())
 			return;
 
@@ -952,16 +945,6 @@ export class ManageRooms extends React.Component<Props, State> {
 
 	getSelectedRoom = () => {
 		return this.state.rooms.slice(0)[this.state.selectedRoomIndex];
-	}
-
-	// Resource Count Focus ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	handleResourceCountFocusIn = () => {
-		if (!this.state.focusOnResourceCount)
-			this.setState({ focusOnResourceCount: true });
-	}
-	handleResourceCountFocusOut = () => {
-		if (this.state.focusOnResourceCount)
-			this.setState({ focusOnResourceCount: false });
 	}
 }
 
