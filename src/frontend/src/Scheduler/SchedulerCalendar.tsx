@@ -482,9 +482,9 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 	}
 
 	getFilteredEventsAndConflicts = (recurringEvents: Event[]): { filteredEvents: Event[], conflictingEvents: Event[] } => {
-		let conflictingEvents: Event[] = [];
+		let conflictingEvents: Set<Event> = new Set<Event>();
 
-		let timeSet = new Set<string>();
+		let timeSet = new Map<string, Event>();
 		this.getStateEventsAsArray().forEach((stateEvent: Event) => {
 			let eventStartString = stateEvent.start;
 			if (eventStartString.length < 20)
@@ -498,10 +498,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			let iterateDate = eventStart.clone();
 
 			while (iterateDate.isBefore(eventEnd)) {
-				timeSet.add(iterateDate.toISOString());
+				timeSet.set(iterateDate.toISOString(), stateEvent);
 				iterateDate.add(15, 'minutes');
 			}
-			timeSet.add(eventEnd.toISOString());
+			timeSet.set(eventEnd.toISOString(), stateEvent);
 		});
 
 		let filteredEvents = recurringEvents.filter(recurringEvent => {
@@ -517,18 +517,18 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			while (iterateDate.isBefore(recurringEventEnd)) {
 				if (timeSet.has(iterateDate.toISOString())) {
 					noConflicts = false;
+					let conflictingEvent = timeSet.get(iterateDate.toISOString());
+					if (conflictingEvent)
+						conflictingEvents.add(conflictingEvent);
 				}
 
 				iterateDate.add(15, 'minutes');
 			}
 
-			if (!noConflicts)
-				conflictingEvents.push(recurringEvent);
-
 			return noConflicts;
 		});
 
-		return { filteredEvents: filteredEvents, conflictingEvents: conflictingEvents };
+		return { filteredEvents: filteredEvents, conflictingEvents: Array.from(conflictingEvents) };
 	}
 
 	// Persist Recurring Events //////////////////////////////////////////////////////////////////////////////////////////////////
