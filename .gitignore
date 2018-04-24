@@ -19,7 +19,7 @@ src/api/config/PublishDates.json
 /src/frontend/.env.development.local
 /src/frontend/.env.test.local
 /src/frontend/.env.production.local
-# /src/api/config/routes.cache.php
+/src/api/config/routes.cache.php
 
 #  logs
 /src/frontend/npm-debug.log*
