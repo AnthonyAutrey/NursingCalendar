@@ -9,6 +9,7 @@ const request = require('superagent');
 interface Props {
 	container: any;
 	filterChangeHandler: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -37,7 +38,6 @@ export class RoomFilter extends React.Component<Props, State> {
 			},
 			open: false
 		};
-		// TODO: Get all possible locations and resources on initialize
 		this.initializeOptions();
 
 		this.addResourceFunction = this.handleAddResource;
@@ -205,7 +205,7 @@ export class RoomFilter extends React.Component<Props, State> {
 				};
 			});
 		}).catch(() => {
-			// TODO: handle error getting data
+			this.props.handleShowAlert('error', 'Error getting data.');
 		});
 	}
 

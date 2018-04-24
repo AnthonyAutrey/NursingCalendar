@@ -137,9 +137,6 @@ export class ManageRooms extends React.Component<Props, State> {
 				</div>
 			);
 
-		console.log(this.state.rooms);
-		console.log(this.state.resources);
-
 		let roomOptions = this.state.rooms.map((room, index) => {
 			return (<option key={uuid()} value={index}>{room.locationName + ' - ' + room.roomName}</option>);
 		});
@@ -254,8 +251,7 @@ export class ManageRooms extends React.Component<Props, State> {
 					return;
 				this.setState({ rooms: parsedRooms, selectedRoomIndex: 0, initialized: true });
 			} else {
-				alert('Error getting room data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting room data.');
 			}
 		});
 	}
@@ -313,8 +309,7 @@ export class ManageRooms extends React.Component<Props, State> {
 					return;
 				this.setState({ locations: parsedLocations });
 			} else {
-				alert('Error getting location data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting location data.');
 			}
 		});
 	}
@@ -342,8 +337,7 @@ export class ManageRooms extends React.Component<Props, State> {
 					resources: parsedResources
 				});
 			} else {
-				alert('Error getting resource data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting resource data.');
 			}
 		});
 	}
@@ -483,7 +477,6 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	handleChangeResourceCount = (resourceCount: number, index: number) => {
-		console.log('handling change resource count in manageRooms');
 		let room = this.state.rooms[this.state.selectedRoomIndex];
 		let selectedResource = room.resources[index];
 		let rooms = this.state.rooms;
@@ -558,7 +551,6 @@ export class ManageRooms extends React.Component<Props, State> {
 	}
 
 	handlePersistChanges = () => {
-		console.log('submitting changes');
 		if (!this.doValidityChecks())
 			return;
 
@@ -576,13 +568,6 @@ export class ManageRooms extends React.Component<Props, State> {
 			let roomsToCreateInDB = this.getRoomsNotInDB(dbRooms);
 			let roomsNotCreatedInDB = this.filterIdenticalRooms(this.state.rooms, roomsToCreateInDB);
 			let roomsToUpdateInDB = this.filterIdenticalRooms(roomsNotCreatedInDB, dbRooms);
-
-			console.log('To Delete: ');
-			console.log(roomNamesToDelete);
-			console.log('To Create: ');
-			console.log(roomsToCreateInDB);
-			console.log('To Update: ');
-			console.log(roomsToUpdateInDB);
 
 			let persistToDBPromises = [
 				this.deleteRoomsFromDB(roomNamesToDelete),

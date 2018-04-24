@@ -12,6 +12,7 @@ interface Props {
 	cwid: number;
 	role: string;
 	handleActiveRouteChange: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -176,8 +177,7 @@ export class ViewingCalendar extends React.Component<Props, State> {
 			this.populateGroupSemesterMap().then(() => {
 				this.getUserFilteredEvents();
 			}).catch(() => {
-				alert('Error getting data!, Handle properly!');
-				// TODO: handle this properly
+				this.props.handleShowAlert('Error getting data.');
 			});
 		else {
 			this.setState({ loading: true });
@@ -186,13 +186,10 @@ export class ViewingCalendar extends React.Component<Props, State> {
 					this.populateGroupSemesterMap().then(() => {
 						this.setState({ events: this.parseDBEvents(res.body), loading: false });
 					}).catch(() => {
-						alert('Error getting data!, Handle properly!');
-
-						// TODO: handle this properly
+						this.props.handleShowAlert('Error getting data.');
 					});
 				} else
-					alert('Error getting data!, Handle properly!');
-				// TODO: handle this properly
+					this.props.handleShowAlert('Error getting data.');
 			});
 		}
 	}
@@ -224,11 +221,10 @@ export class ViewingCalendar extends React.Component<Props, State> {
 
 				this.setState({ events: events, loading: false });
 			}).catch(() => {
-				// TODO: handle error
+				this.props.handleShowAlert('Error getting data.');
 			});
 		}).catch(() => {
-			alert('error, couldn\'t get events!');
-			// TODO: Handle Failure
+			this.props.handleShowAlert('Error getting data.');
 		});
 
 		return groups;
@@ -404,14 +400,11 @@ export class ViewingCalendar extends React.Component<Props, State> {
 						}
 					});
 					request.put('/api/preferences').set('queryData', putQueryData).end((putError: {}, putRes: any) => {
-						if (!putRes || !putRes.body)
-							alert('Error Submitting, handle this!');
-						// TODO: handle this error properly
+						// do nothing	
 					});
 				}
 			else
-				alert('Error getting prefs data, handle this!');
-			// TODO: handle this error properly
+				this.props.handleShowAlert('Error getting data.');
 		});
 	}
 
@@ -437,9 +430,7 @@ export class ViewingCalendar extends React.Component<Props, State> {
 		});
 
 		request.post('/api/preferences/' + this.props.cwid).set('queryData', queryData).end((putError: {}, res: any) => {
-			if (!res || !res.body)
-				alert('Error Submitting, handle this!');
-			// TODO: handle this error properly
+			// do nothing
 		});
 	}
 
@@ -459,9 +450,7 @@ export class ViewingCalendar extends React.Component<Props, State> {
 		});
 
 		request.post('/api/preferences/' + this.props.cwid).set('queryData', queryData).end((putError: {}, res: any) => {
-			if (!res || !res.body)
-				alert('Error Submitting, handle this!');
-			// TODO: handle this error properly
+			// do nothing
 		});
 	}
 
@@ -482,9 +471,7 @@ export class ViewingCalendar extends React.Component<Props, State> {
 		});
 
 		request.post('/api/preferences/' + this.props.cwid).set('queryData', queryData).end((putError: {}, res: any) => {
-			if (!res || !res.body)
-				alert('Error Submitting, handle this!');
-			// TODO: handle this error properly
+			// do nothing
 		});
 	}
 

@@ -131,8 +131,7 @@ export class ManageLocations extends React.Component<Props, State> {
 					return;
 				this.setState({ locations: parsedLocations, selectedLocation: parsedLocations[0].name, selectedLocationIndex: 0 });
 			} else {
-				alert('Error getting location data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting location data.');
 			}
 		});
 	}
@@ -168,13 +167,6 @@ export class ManageLocations extends React.Component<Props, State> {
 			let locationsToCreateInDB = this.getLocationsNotInDB(dbLocations);
 			let locationsNotCreatedInDB = this.filterIdenticalLocations(this.state.locations, locationsToCreateInDB);
 			let locationsToUpdateInDB = this.filterIdenticalLocations(locationsNotCreatedInDB, dbLocations);
-
-			console.log('To Delete: ');
-			console.log(locationNamesToDelete);
-			console.log('To Create: ');
-			console.log(locationsToCreateInDB);
-			console.log('To Update: ');
-			console.log(locationsToUpdateInDB);
 
 			let persistToDBPromises = [
 				this.deleteLocationsFromDB(locationNamesToDelete),
@@ -328,8 +320,6 @@ export class ManageLocations extends React.Component<Props, State> {
 	}
 
 	handleChangeLocationName = (event: any, index: number) => {
-		console.log('handleChangeLocationName');
-		console.log(index);
 		if (event.target.value.length <= 60) {
 			let locations = this.state.locations.slice(0);
 			locations[index].name = event.target.value;

@@ -49,6 +49,7 @@ class App extends React.Component<{}, State> {
 					name={this.state.name}
 					activeRoute={this.state.activeRoute}
 					handleLogout={this.handleLogout}
+					handleShowAlert={this.handleShowAlert}
 				/>
 				<Router>
 					<Switch>
@@ -93,7 +94,12 @@ class App extends React.Component<{}, State> {
 		let routes: JSX.Element[] = [
 			(
 				<Route key="/" path="/" exact={true}>
-					<ViewingCalendar cwid={this.state.cwid || 0} role={this.state.role || ''} handleActiveRouteChange={this.handleActiveRouteChange} />
+					<ViewingCalendar
+						cwid={this.state.cwid || 0}
+						role={this.state.role || ''}
+						handleActiveRouteChange={this.handleActiveRouteChange}
+						handleShowAlert={this.handleShowAlert}
+					/>
 				</ Route>
 			),
 			(<Route key="/classes" path="/classes" component={() => <div>Create Manage Classes Component!</div>} />)

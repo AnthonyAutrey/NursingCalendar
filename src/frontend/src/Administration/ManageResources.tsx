@@ -161,8 +161,7 @@ export class ManageResources extends React.Component<Props, State> {
 					selectedResourceIsEnumerable: initialResourceIsEnumerableCheckValue
 				});
 			} else {
-				alert('Error getting resource data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting resource data.');
 			}
 		});
 	}
@@ -201,13 +200,6 @@ export class ManageResources extends React.Component<Props, State> {
 			let resourcesToCreateInDB = this.getResourcesNotInDB(dbResources);
 			let resourcesNotCreatedInDB = this.filterIdenticalResources(this.state.resources, resourcesToCreateInDB);
 			let resourcesToUpdateInDB = this.determineResourcesToUpdate();
-
-			console.log('To Delete: ');
-			console.log(resourceNamesToDelete);
-			console.log('To Create: ');
-			console.log(resourcesToCreateInDB);
-			console.log('To Update: ');
-			console.log(resourcesToUpdateInDB);
 
 			let persistToDBPromises = [
 				this.deleteResourcesFromDB(resourceNamesToDelete),
@@ -356,7 +348,6 @@ export class ManageResources extends React.Component<Props, State> {
 
 				let queryData: {}[] = [];
 				resources.forEach(resource => {
-					console.log(resource);
 					if (!(resource.isEnumerable > 0))
 						queryData.push(
 							{

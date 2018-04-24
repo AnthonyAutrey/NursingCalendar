@@ -70,7 +70,6 @@ export class RoomResource extends React.Component<Props, State> {
 	}
 
 	handleChangeLocalResourceCount = (event: any) => {
-		console.log('handling local change');
 		this.setState({ resourceCount: event.target.value });
 	}
 }

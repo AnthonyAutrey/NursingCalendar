@@ -52,7 +52,6 @@ export class ManageUsers extends React.Component<Props, State> {
 		});
 
 		let selectedUser = this.getSelectedUser();
-		console.log(selectedUser);
 
 		let userGroupsSelector = null;
 		if (selectedUser)

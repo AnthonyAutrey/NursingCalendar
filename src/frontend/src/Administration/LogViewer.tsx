@@ -93,7 +93,9 @@ export class LogViewer extends React.Component<Props, State> {
 						<h4 className="card-title">Event Logs</h4>
 						<hr />
 						{noLogsMessage}
-						{logs}
+						<div style={{ maxHeight: 1000, overflowY: 'scroll', overflowX: 'hidden' }}>
+							{logs}
+						</div>
 						<hr />
 						{
 							this.state.logs.length > 0 &&
@@ -156,7 +158,6 @@ export class LogViewer extends React.Component<Props, State> {
 			deleteDate.setHours(23, 59, 59, 999);
 			deleteDate.setMinutes(deleteDate.getMinutes() - deleteDate.getTimezoneOffset());
 			deleteDate.setDate(deleteDate.getDate() + 1);
-			console.log(deleteDate.toISOString());
 
 			return new Date(stateLog.time) <= deleteDate;
 		});
@@ -164,8 +165,6 @@ export class LogViewer extends React.Component<Props, State> {
 		let deleteLogIDs: number[] = logsToDelete.map(deleteLog => {
 			return deleteLog.logID;
 		});
-
-		console.log(deleteLogIDs);
 
 		let queryData = {
 			where: { LogID: deleteLogIDs }

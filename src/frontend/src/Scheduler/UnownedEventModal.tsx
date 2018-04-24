@@ -8,6 +8,7 @@ const uuid = require('uuid/v4');
 interface Props {
 	cwid: number;
 	handleOverrideRequest: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -225,7 +226,6 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		let detailString = '';
 		if (this.state.event && this.state.event.recurringInfo) {
 			let recurringInfo = this.state.event.recurringInfo;
-			console.log(recurringInfo);
 			if (recurringInfo && recurringInfo.type === 'daily')
 				detailString = 'Daily from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
 			else if (recurringInfo && recurringInfo.type === 'weekly')
@@ -260,8 +260,7 @@ export class UnownedEventModal extends React.Component<Props, State> {
 				if (this.state.event)
 					this.props.handleOverrideRequest(this.state.event.id, this.state.requestForAllRecurring);
 			}).catch(() => {
-				// TODO: handle failure better
-				alert('Something went wrong!');
+				this.props.handleShowAlert('error', 'Error requesting timeslot.');
 			});
 		}
 	}
@@ -284,10 +283,9 @@ export class UnownedEventModal extends React.Component<Props, State> {
 				};
 				let queryDataString = JSON.stringify(queryData);
 				request.put('/api/overriderequests').set('queryData', queryDataString).end((error: {}, res: any) => {
-					if (res && res.body) {
+					if (res && res.body)
 						resolve();
-						console.log('created override request: ' + JSON.stringify(res.body));
-					} else
+					else
 						reject();
 				});
 			}
@@ -295,7 +293,6 @@ export class UnownedEventModal extends React.Component<Props, State> {
 	}
 
 	private getCurrentDateTimeInSqlFormat = () => {
-		// TODO: This produces a UTC time, ensure that's what it needs to be
 		return new Date().toISOString().slice(0, 19).replace('T', ' ');
 	}
 
