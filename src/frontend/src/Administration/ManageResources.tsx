@@ -47,24 +47,21 @@ export class ManageResources extends React.Component<Props, State> {
 					<hr />
 					<div className="w-100 px-5">
 						<div className="card-body">
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Resources</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddResource}>
+								Add Resource &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
+							</button>
+							<hr />
 							<div className="row">
-								<h4 className="card-title">Manage Resources</h4>
-								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddResource}>
-									Add Resource &nbsp;&nbsp;
-									<span className="plusIcon oi oi-size-sm oi-plus" />
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+									Submit Changes
 								</button>
 							</div>
-							<hr />
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
 						</div>
-					</div>
-					<hr />
-					<div className="row">
-						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
-							Submit Changes
-							</button>
-					</div>
-					<div className="form-group d-flex">
-						<div className="ml-auto" style={{ width: '120px !important' }} />
 					</div>
 					<hr />
 				</div>
@@ -75,13 +72,11 @@ export class ManageResources extends React.Component<Props, State> {
 					<hr />
 					<div className="w-100 px-5">
 						<div className="card-body">
-							<div className="row">
-								<h4 className="card-title">Manage Resources</h4>
-								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddResource}>
-									Add Resource &nbsp;&nbsp;
-									<span className="plusIcon oi oi-size-sm oi-plus" />
-								</button>
-							</div>
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Resources</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddResource}>
+								Add Resource &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
+							</button>
 							<hr />
 							<div className="form-group row">
 								<label className="col-lg-4 col-form-label text-left">Resource:</label>
@@ -107,7 +102,6 @@ export class ManageResources extends React.Component<Props, State> {
 									/>
 								</div>
 							</div>
-							{/*TODO Add a tooltip and fix that shizzle*/}
 							<div className="form-group row">
 								<label className="col-lg-4 col-form-label text-left">Is this resource&nbsp;
 									<a
@@ -133,14 +127,14 @@ export class ManageResources extends React.Component<Props, State> {
 										<span className=" oi oi-trash" />
 										<span>&nbsp;&nbsp;</span>
 										Delete Resource
-						</button>
+									</button>
 								</div>
 							</div>
 							<hr />
 							<div className="row">
 								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
 									Submit Changes
-							</button>
+								</button>
 							</div>
 							<div className="form-group d-flex">
 								<div className="ml-auto" style={{ width: '120px !important' }} />
@@ -224,6 +218,7 @@ export class ManageResources extends React.Component<Props, State> {
 			Promise.all(persistToDBPromises).then(() => {
 				this.props.handleShowAlert('success', 'Successfully submitted data!');
 				this.resetDBNames();
+				location.reload();
 			}).catch(() => {
 				this.props.handleShowAlert('error', 'Error submitting data.');
 			});
@@ -352,6 +347,37 @@ export class ManageResources extends React.Component<Props, State> {
 				else
 					reject();
 			});
+		}).then(() => {
+			return new Promise((resolve, reject) => {
+				if (resources.length <= 0) {
+					resolve();
+					return;
+				}
+
+				let queryData: {}[] = [];
+				resources.forEach(resource => {
+					console.log(resource);
+					if (!(resource.isEnumerable > 0))
+						queryData.push(
+							{
+								setValues: {
+									Count: null
+								},
+								where: {
+									ResourceName: resource.name
+								}
+							});
+				});
+
+				let queryDataString = JSON.stringify(queryData);
+
+				request.post('/api/roomresources').set('queryData', queryDataString).end((error: {}, res: any) => {
+					if (res && res.body)
+						resolve();
+					else
+						reject();
+				});
+			});
 		});
 	}
 
@@ -398,7 +424,9 @@ export class ManageResources extends React.Component<Props, State> {
 			resources[index].isEnumerable = 1;
 			resources[index].isEnumerableBoolean = true;
 		}
+
 		this.setState({ resources: resources, selectedResourceIsEnumerable: !this.state.selectedResourceIsEnumerable });
+
 	}
 
 	getSelectedResource = () => {
@@ -420,7 +448,7 @@ export class ManageResources extends React.Component<Props, State> {
 			return;
 
 		let newResourceCount = 0;
-		
+
 		if (this.state.resources.length !== 0)
 			this.state.resources.forEach(resource => {
 				if (resource.name.substr(0, 12) === 'New Resource')
@@ -452,7 +480,10 @@ export class ManageResources extends React.Component<Props, State> {
 	}
 
 	handleDeleteResource = (index: number) => {
-		if (!confirm('Are you sure you want to delete this resource?'))
+		if (
+			!confirm(
+				'Are you sure you want to delete this resource?' +
+				' This resource will be removed from all rooms. This action cannot be reverted after clicking \'Submit Changes\'!'))
 			return;
 
 		let resources = this.state.resources.slice(0);

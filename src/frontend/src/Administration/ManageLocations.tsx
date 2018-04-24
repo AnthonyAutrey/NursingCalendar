@@ -42,24 +42,21 @@ export class ManageLocations extends React.Component<Props, State> {
 					<hr />
 					<div className="w-100 px-5">
 						<div className="card-body">
-							<div className="row">
-								<h4 className="card-title">Manage Locations</h4>
-								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
-									Add Location &nbsp;&nbsp;
-								<span className="plusIcon oi oi-size-sm oi-plus" />
-								</button>
-							</div>
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Locations</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddLocation}>
+								Add Location &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
+							</button>
 							<hr />
+							<div className="row">
+								<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
+									Submit Changes
+							</button>
+							</div>
+							<div className="form-group d-flex">
+								<div className="ml-auto" style={{ width: '120px !important' }} />
+							</div>
 						</div>
-					</div>
-					<hr />
-					<div className="row">
-						<button tabIndex={3} className="btn btn-primary btn-block mx-2 mt-2" onClick={() => this.handlePersistChanges()}>
-							Submit Changes
-						</button>
-					</div>
-					<div className="form-group d-flex">
-						<div className="ml-auto" style={{ width: '120px !important' }} />
 					</div>
 					<hr />
 				</div>
@@ -70,13 +67,11 @@ export class ManageLocations extends React.Component<Props, State> {
 					<hr />
 					<div className="w-100 px-5">
 						<div className="card-body">
-							<div className="row">
-								<h4 className="card-title">Manage Locations</h4>
-								<button className="btn btn-primary col-form-label text-mid ml-auto" onClick={this.handleAddLocation}>
-									Add Location &nbsp;&nbsp;
-									<span className="plusIcon oi oi-size-sm oi-plus" />
-								</button>
-							</div>
+							<span className="card-title" style={{ fontSize: '1.5em' }}>Manage Locations</span>
+							<button className="btn btn-primary float-right" onClick={this.handleAddLocation}>
+								Add Location &nbsp;&nbsp;
+							<span className="plusIcon oi oi-size-sm oi-plus" style={{ top: '-1px' }} />
+							</button>
 							<hr />
 							<div className="form-group row">
 								<label className="col-lg-4 col-form-label text-left">Location:</label>
@@ -190,6 +185,7 @@ export class ManageLocations extends React.Component<Props, State> {
 			Promise.all(persistToDBPromises).then(() => {
 				this.props.handleShowAlert('success', 'Successfully submitted data!');
 				this.resetDBNames();
+				location.reload();
 			}).catch(() => {
 				this.props.handleShowAlert('error', 'Error submitting data.');
 			});
@@ -388,7 +384,8 @@ export class ManageLocations extends React.Component<Props, State> {
 	}
 
 	handleDeleteLocation = (index: number) => {
-		if (!confirm('Are you sure you want to delete this location?'))
+		if (!confirm('Are you sure you want to delete this location? This will delete the location and all of its associated rooms. ' +
+			'This action cannot be reverted after clicking \'Submit Changes\'!'))
 			return;
 
 		let locations = this.state.locations.slice(0);

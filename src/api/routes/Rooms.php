@@ -21,9 +21,9 @@ $app->put('/rooms', function (Request $request, Response $response, array $args)
 		}
 
 		$queryString = DBUtil::buildInsertQuery('rooms', $queryData['insertValues']);
-		$results[$queryData['insertValues']] = DBUtil::runCommand($queryString);
+		array_push($results, DBUtil::runCommand($queryString));
 	}
-	$response->getBody()->write($results);
+	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 })->add($requireAdmin);
@@ -31,7 +31,8 @@ $app->put('/rooms', function (Request $request, Response $response, array $args)
 // Read //
 $app->get('/rooms', function (Request $request, Response $response, array $args) {
 	$queryData = getSelectQueryData($request);
-	$queryString = DBUtil::buildSelectQuery('rooms natural left outer join roomResourceRelation', $queryData['fields'], $queryData['where']);
+	$queryString = DBUtil::buildSelectQuery('rooms natural left outer join roomResourceRelation '.
+		'natural left outer join Resources', $queryData['fields'], $queryData['where']);
 	$rooms = DBUtil::runQuery($queryString);
 	$response->getBody()->write($rooms);
 	$response = $response->withHeader('Content-type', 'application/json');
@@ -66,12 +67,22 @@ $app->post('/rooms', function (Request $request, Response $response, array $args
 
 // Delete //
 $app->delete('/rooms', function (Request $request, Response $response, array $args) {
-	$queryData = getDeleteQueryData($request);
-	$deleteQuery = DBUtil::buildDeleteQuery('rooms', $queryData['where']);
-	$results = DBUtil::runCommand($deleteQuery);
+	$results = [];
+	$queryDataArray = getDeleteQueryData($request);
+	if (array_key_exists("where", $queryDataArray))
+		$queryDataArray = [$queryDataArray];
+	foreach ($queryDataArray as $queryData) {
+		// return with 'bad request' response if request isn't correct
+		if (!isset($queryData['where'])) {
+			return $response->withStatus(400);
+		}
+		$deleteQuery = DBUtil::buildDeleteQuery('rooms', $queryData['where']);
+		array_push($results, DBUtil::runCommand($deleteQuery));
+	}
+
 	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
-	return $response;	
+	return $response;
 })->add($requireAnyRole);
 
 
@@ -94,9 +105,9 @@ $app->put('/roomresources', function (Request $request, Response $response, arra
 		}
 
 		$queryString = DBUtil::buildInsertQuery('RoomResourceRelation', $queryData['insertValues']);
-		$results[$queryData['insertValues']] = DBUtil::runCommand($queryString);
+		array_push($results, DBUtil::runCommand($queryString));
 	}
-	$response->getBody()->write($results);
+	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
 	return $response;
 })->add($requireAdmin);
@@ -104,7 +115,7 @@ $app->put('/roomresources', function (Request $request, Response $response, arra
 // Read //
 $app->get('/roomresources', function (Request $request, Response $response, array $args) {
 	$queryData = getSelectQueryData($request);
-	$queryString = DBUtil::buildSelectQuery('RoomResourceRelation', $queryData['fields'], $queryData['where']);
+	$queryString = DBUtil::buildSelectQuery('RoomResourceRelation NATURAL left join Resources', $queryData['fields'], $queryData['where']);
 	$roomResources = DBUtil::runQuery($queryString);
 	$response->getBody()->write($roomResources);
 	$response = $response->withHeader('Content-type', 'application/json');
@@ -139,10 +150,20 @@ $app->post('/roomresources', function (Request $request, Response $response, arr
 
 // Delete //
 $app->delete('/roomresources', function (Request $request, Response $response, array $args) {
-	$queryData = getDeleteQueryData($request);
-	$deleteQuery = DBUtil::buildDeleteQuery('RoomResourceRelation', $queryData['where']);
-	$results = DBUtil::runCommand($deleteQuery);
+	$results = [];
+	$queryDataArray = getDeleteQueryData($request);
+	if (array_key_exists("where", $queryDataArray))
+		$queryDataArray = [$queryDataArray];
+	foreach ($queryDataArray as $queryData) {
+		// return with 'bad request' response if request isn't correct
+		if (!isset($queryData['where'])) {
+			return $response->withStatus(400);
+		}
+		$deleteQuery = DBUtil::buildDeleteQuery('RoomResourceRelation', $queryData['where']);
+		array_push($results, DBUtil::runCommand($deleteQuery));
+	}
+
 	$response->getBody()->write(json_encode($results));
 	$response = $response->withHeader('Content-type', 'application/json');
-	return $response;	
+	return $response;
 })->add($requireAdmin);
