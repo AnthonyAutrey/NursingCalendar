@@ -41,6 +41,7 @@ export class Scheduler extends React.Component<Props, State> {
 	private schedulerCalendar: SchedulerCalendar | null;
 	private toolbar: any;
 	private roomComponentContainer: any;
+	private mobileComponentContainer: any;
 	private allRooms: Room[] = [];
 	private defaultToolbarMessage: string = 'Click and drag to schedule a new event.';
 	private lastSelectedRoom: Room;
@@ -132,11 +133,11 @@ export class Scheduler extends React.Component<Props, State> {
 								handleShowAlert={this.props.handleShowAlert}
 							/>
 						</div>
-						<div className="col-md-3 mb-3 d-print-none d-md-none" ref={(container) => { this.roomComponentContainer = container; }}>
+						<div className="col-md-3 mb-3 d-print-none d-md-none" ref={(container) => { this.mobileComponentContainer = container; }}>
 							{
 								this.state.showRoomSelectorOnMobile ?
 									<div>
-										<RoomFilter container={this.roomComponentContainer} filterChangeHandler={this.filterChangeHandler} />
+										<RoomFilter container={this.mobileComponentContainer} filterChangeHandler={this.filterChangeHandler} />
 										<RoomSelector
 											rooms={this.state.rooms}
 											selectedRoom={selectedRoom}
