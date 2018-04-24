@@ -36,10 +36,10 @@ class ComputingCenter {
 			'00000000'=>['role'=>'student', 'firstName'=>'Peter', 'lastName'=>'Pham'],
 			'01111111'=>['role'=>'student', 'firstName'=>'Brian', 'lastName'=>'Wilson'],
 			'02222222'=>['role'=>'student', 'firstName'=>'Benjamin', 'lastName'=>'Lee'],
-			'10000000'=>['role'=>'instructor', 'firstName'=>'Kim', 'lastName'=>'Taylor'],
+			// '10000000'=>['role'=>'instructor', 'firstName'=>'Kim', 'lastName'=>'Taylor'],
 			'11111111'=>['role'=>'instructor', 'firstName'=>'Paul', 'lastName'=>'Wiedemeier'],
 			'12222222'=>['role'=>'instructor', 'firstName'=>'Tyler', 'lastName'=>'Greer'],
-			'20000000'=>['role'=>'instructor', 'firstName'=>'Jose', 'lastName'=>'Cordova'],
+			'10000000'=>['role'=>'instructor', 'firstName'=>'Jose', 'lastName'=>'Cordova'],
 			'21111111'=>['role'=>'instructor', 'firstName'=>'Lon', 'lastName'=>'Smith'],
 			'22222222'=>['role'=>'instructor', 'firstName'=>'Virginia', 'lastName'=>'Eaton'],
 			'12345678'=>['role'=>'instructor', 'firstName'=>'Sherry', 'lastName'=>'Peveto']
@@ -57,11 +57,15 @@ class ComputingCenter {
 		// The following is for testing purposes only and should be removed for production!
 		$studentCRNs = [
 			'00000000'=>['43928', '43672', '43678', '43681'],
-			'01111111'=>['43936', '43940', '43942'],
+			'01111111'=>['43929'],
 			'02222222'=>['43943', '43948', '43953'],
 		];
 
 		return $studentCRNs[$cwid];
+
+
+		// Peter (0000000): 2004a, 2009a, 2011a, 2013a (Sem 1)
+		// Brian (01111111): 2004b
 	}
 
 	// Accepts an instructor's cwid and returns a string array of CRNs representing the classes that the instructor teaches.
