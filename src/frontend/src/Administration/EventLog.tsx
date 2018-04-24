@@ -47,7 +47,7 @@ export class EventLog extends React.Component<Props, State> {
 					{this.formatDate(this.props.log.time)}
 				</div>
 				<div className="col-sm-2">
-					<button onClick={() => this.setState({ showDetails: !this.state.showDetails })} className="btn btn-primary btn-sm float-right">
+					<button onClick={() => this.setState({ showDetails: !this.state.showDetails })} className="btn btn-primary btn-sm float-right mr-2">
 						{this.state.showDetails ? 'Hide Details' : 'Show Details'}
 					</button>
 				</div>

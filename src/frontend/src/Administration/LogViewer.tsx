@@ -93,7 +93,9 @@ export class LogViewer extends React.Component<Props, State> {
 						<h4 className="card-title">Event Logs</h4>
 						<hr />
 						{noLogsMessage}
-						{logs}
+						<div style={{ maxHeight: 1000, overflowY: 'scroll', overflowX: 'hidden' }}>
+							{logs}
+						</div>
 						<hr />
 						{
 							this.state.logs.length > 0 &&
