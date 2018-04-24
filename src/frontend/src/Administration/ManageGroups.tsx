@@ -253,13 +253,6 @@ export class ManageGroups extends React.Component<Props, State> {
 			let groupsNotCreatedInDB = this.filterIdenticalGroups(this.state.groups, groupsToCreateInDB);
 			let groupsToUpdateInDB = this.filterIdenticalGroups(groupsNotCreatedInDB, dbGroups);
 
-			console.log('To Delete: ');
-			console.log(groupNamesToDelete);
-			console.log('To Create: ');
-			console.log(groupsToCreateInDB);
-			console.log('To Update: ');
-			console.log(groupsToUpdateInDB);
-
 			let persistToDBPromises = [
 				this.deleteGroupsFromDB(groupNamesToDelete),
 				this.createGroupsInDB(groupsToCreateInDB),

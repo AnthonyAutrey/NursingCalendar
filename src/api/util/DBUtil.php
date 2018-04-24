@@ -18,7 +18,6 @@ class DBUtil {
 			return $results;
 
 		} catch(PDOException $ex) {
-			echo $ex->getMessage(); // TODO: remove this for production
 			return "error";
 		}
 	}
@@ -35,7 +34,6 @@ class DBUtil {
 			return json_encode($results);
 
 		} catch(PDOException $ex) {
-			echo $ex->getMessage(); // TODO: remove this for production
 			return "error";			
 		}
 	}

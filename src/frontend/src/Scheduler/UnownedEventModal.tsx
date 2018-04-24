@@ -226,7 +226,6 @@ export class UnownedEventModal extends React.Component<Props, State> {
 		let detailString = '';
 		if (this.state.event && this.state.event.recurringInfo) {
 			let recurringInfo = this.state.event.recurringInfo;
-			console.log(recurringInfo);
 			if (recurringInfo && recurringInfo.type === 'daily')
 				detailString = 'Daily from ' + recurringInfo.startDate.format('MM-DD-YYYY') + ' to ' + recurringInfo.endDate.format('MM-DD-YYYY') + '.';
 			else if (recurringInfo && recurringInfo.type === 'weekly')
@@ -284,10 +283,9 @@ export class UnownedEventModal extends React.Component<Props, State> {
 				};
 				let queryDataString = JSON.stringify(queryData);
 				request.put('/api/overriderequests').set('queryData', queryDataString).end((error: {}, res: any) => {
-					if (res && res.body) {
+					if (res && res.body)
 						resolve();
-						console.log('created override request: ' + JSON.stringify(res.body));
-					} else
+					else
 						reject();
 				});
 			}

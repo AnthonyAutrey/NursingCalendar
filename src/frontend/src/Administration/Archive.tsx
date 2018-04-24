@@ -124,7 +124,6 @@ export class Archive extends React.Component<Props, State> {
 	}
 
 	createAndDownloadArchive = (events: Event[]) => {
-		console.log(events);
 		if (events.length < 1) {
 			this.props.handleShowAlert('error', 'No events found during selected period!');
 			return;

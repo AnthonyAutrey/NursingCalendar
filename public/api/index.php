@@ -62,7 +62,6 @@ if (!$config['devEnvironment']) {
 
 	$container['errorHandler'] = function ($container) {
 		return function ($request, $response, $exception) use ($container) {
-			// TODO: retrieve logger from $container here and log the error
 			$response->getBody()->rewind();
 			return $response->withStatus(500)
 							->withHeader('Content-Type', 'text/html')
@@ -72,7 +71,6 @@ if (!$config['devEnvironment']) {
 
 	$container['phpErrorHandler'] = function ($container) {
 		return function ($request, $response, $error) use ($container) {
-			// TODO: retrieve logger from $container here and log the error
 			$response->getBody()->rewind();
 			return $response->withStatus(500)
 							->withHeader('Content-Type', 'text/html')

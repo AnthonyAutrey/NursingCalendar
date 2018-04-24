@@ -156,7 +156,6 @@ export class LogViewer extends React.Component<Props, State> {
 			deleteDate.setHours(23, 59, 59, 999);
 			deleteDate.setMinutes(deleteDate.getMinutes() - deleteDate.getTimezoneOffset());
 			deleteDate.setDate(deleteDate.getDate() + 1);
-			console.log(deleteDate.toISOString());
 
 			return new Date(stateLog.time) <= deleteDate;
 		});
@@ -164,8 +163,6 @@ export class LogViewer extends React.Component<Props, State> {
 		let deleteLogIDs: number[] = logsToDelete.map(deleteLog => {
 			return deleteLog.logID;
 		});
-
-		console.log(deleteLogIDs);
 
 		let queryData = {
 			where: { LogID: deleteLogIDs }

@@ -168,13 +168,6 @@ export class ManageLocations extends React.Component<Props, State> {
 			let locationsNotCreatedInDB = this.filterIdenticalLocations(this.state.locations, locationsToCreateInDB);
 			let locationsToUpdateInDB = this.filterIdenticalLocations(locationsNotCreatedInDB, dbLocations);
 
-			console.log('To Delete: ');
-			console.log(locationNamesToDelete);
-			console.log('To Create: ');
-			console.log(locationsToCreateInDB);
-			console.log('To Update: ');
-			console.log(locationsToUpdateInDB);
-
 			let persistToDBPromises = [
 				this.deleteLocationsFromDB(locationNamesToDelete),
 				this.createLocationsInDB(locationsToCreateInDB),
@@ -327,8 +320,6 @@ export class ManageLocations extends React.Component<Props, State> {
 	}
 
 	handleChangeLocationName = (event: any, index: number) => {
-		console.log('handleChangeLocationName');
-		console.log(index);
 		if (event.target.value.length <= 60) {
 			let locations = this.state.locations.slice(0);
 			locations[index].name = event.target.value;
