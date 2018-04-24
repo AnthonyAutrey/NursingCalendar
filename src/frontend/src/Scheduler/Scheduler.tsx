@@ -137,7 +137,11 @@ export class Scheduler extends React.Component<Props, State> {
 							{
 								this.state.showRoomSelectorOnMobile ?
 									<div>
-										<RoomFilter container={this.mobileComponentContainer} filterChangeHandler={this.filterChangeHandler} />
+										<RoomFilter
+											container={this.mobileComponentContainer}
+											filterChangeHandler={this.filterChangeHandler}
+											handleShowAlert={this.props.handleShowAlert}
+										/>
 										<RoomSelector
 											rooms={this.state.rooms}
 											selectedRoom={selectedRoom}

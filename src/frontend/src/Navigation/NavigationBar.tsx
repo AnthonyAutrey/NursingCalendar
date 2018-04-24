@@ -9,6 +9,7 @@ interface Props {
 	role: string;
 	name?: string;
 	activeRoute: string;
+	handleShowAlert: Function;
 }
 
 export class NavigationBar extends React.Component<Props, {}> {
@@ -77,7 +78,7 @@ export class NavigationBar extends React.Component<Props, {}> {
 					<div className="ml-auto mr-3">
 						{this.props.name}
 					</div>
-					<NotificationDropdown cwid={this.props.cwid} role={this.props.role} />
+					<NotificationDropdown handleShowAlert={this.props.handleShowAlert} cwid={this.props.cwid} role={this.props.role} />
 				</div>
 			</nav>
 		);

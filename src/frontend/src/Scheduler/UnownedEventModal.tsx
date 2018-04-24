@@ -8,6 +8,7 @@ const uuid = require('uuid/v4');
 interface Props {
 	cwid: number;
 	handleOverrideRequest: Function;
+	handleShowAlert: Function;
 }
 
 interface State {
@@ -260,8 +261,7 @@ export class UnownedEventModal extends React.Component<Props, State> {
 				if (this.state.event)
 					this.props.handleOverrideRequest(this.state.event.id, this.state.requestForAllRecurring);
 			}).catch(() => {
-				// TODO: handle failure better
-				alert('Something went wrong!');
+				this.props.handleShowAlert('error', 'Error requesting timeslot.');
 			});
 		}
 	}
@@ -295,7 +295,6 @@ export class UnownedEventModal extends React.Component<Props, State> {
 	}
 
 	private getCurrentDateTimeInSqlFormat = () => {
-		// TODO: This produces a UTC time, ensure that's what it needs to be
 		return new Date().toISOString().slice(0, 19).replace('T', ' ');
 	}
 

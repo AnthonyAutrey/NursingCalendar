@@ -91,8 +91,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 		this.populateGroupSemesterMap().then(() => {
 			this.forceUpdate();
 		}).catch(() => {
-			alert('Error getting data. Handle this properly!');
-			// TODO: Handle this properly
+			this.props.handleShowAlert('error', 'Error getting data.');
 		});
 
 		request.get(route).end((error: {}, res: any) => {
@@ -104,8 +103,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 				this.setState({ groupOptionsFromAPI: groups });
 			} else
-				alert('Error getting data. Handle this properly!');
-			// TODO: Handle this properly
+				this.props.handleShowAlert('error', 'Error getting data.');
 		});
 	}
 
@@ -151,6 +149,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					ref={unownedEventModal => { this.unownedEventModal = unownedEventModal; }}
 					cwid={this.props.cwid}
 					handleOverrideRequest={this.handleOverrideRequest}
+					handleShowAlert={this.props.handleShowAlert}
 				/>
 				<FullCalendarReact
 					id="calendar"
@@ -881,7 +880,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 				loading: false
 			});
 		}).catch(() => {
-			// TODO: handle error
+			this.props.handleShowAlert('error', 'Error getting data.');
 		});
 	}
 
@@ -1284,21 +1283,14 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					request.delete('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body) {
 							this.logEventDeletions(eventsIDsToDelete);
-							// TODO: Notify of event deletion
-							console.log('just deleted events');
-							console.log(eventsIDsToDelete);
 							this.sendNotificationsToOwnersIfDeletedByNonOwner(eventsIDsToDelete);
-
 							resolveOuter();
-						} else {
-							console.log('deleteDBEventsNotInClient failed rejectouter');
+						} else
 							rejectOuter();
-						}
 					});
 				} else
 					resolveOuter();
 			}).catch(() => {
-				console.log('deleteDBEventsNotInClient failed rejectouter bottom catch');
 				rejectOuter();
 			});
 		});
@@ -1323,8 +1315,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			};
 			let queryDataString = JSON.stringify(queryData);
 			request.put('/api/notifications').set('queryData', queryDataString).end((error: {}, res: any) => {
-				if (!res || !res.body)
-					alert('sending unowned event notification failed! Handle this properly!');
+				// do nothing
 			});
 		});
 	}
@@ -1357,8 +1348,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			let queryDataString = JSON.stringify(queryData);
 			console.log(queryData);
 			request.put('/api/notifications').set('queryData', queryDataString).end((error: {}, res: any) => {
-				if (!res || !res.body)
-					alert('sending unowned event notification failed! Handle this properly!');
+				// do nothing
 			});
 		});
 	}
@@ -1534,7 +1524,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 	// Store Calendar State /////////////////////////////////////////////////////////////////////////////////////////////////////////
 	cacheViewAndDate(view: any, element: any) {
-		
+
 		this.currentView = view.name;
 		if (!this.currentDate)
 			this.currentDate = view.intervalStart;
@@ -1545,7 +1535,7 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 
 		if (view.name !== 'agendaWeek')
 			return;
-		
+
 		let pps = this.state.publishPeriodStart;
 		let ppe = this.state.publishPeriodEnd;
 		let loading = this.state.loading;

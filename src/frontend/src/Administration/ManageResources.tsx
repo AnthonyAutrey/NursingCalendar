@@ -161,8 +161,7 @@ export class ManageResources extends React.Component<Props, State> {
 					selectedResourceIsEnumerable: initialResourceIsEnumerableCheckValue
 				});
 			} else {
-				alert('Error getting resource data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting resource data.');
 			}
 		});
 	}

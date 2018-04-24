@@ -254,8 +254,7 @@ export class ManageRooms extends React.Component<Props, State> {
 					return;
 				this.setState({ rooms: parsedRooms, selectedRoomIndex: 0, initialized: true });
 			} else {
-				alert('Error getting room data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting room data.');
 			}
 		});
 	}
@@ -313,8 +312,7 @@ export class ManageRooms extends React.Component<Props, State> {
 					return;
 				this.setState({ locations: parsedLocations });
 			} else {
-				alert('Error getting location data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting location data.');
 			}
 		});
 	}
@@ -342,8 +340,7 @@ export class ManageRooms extends React.Component<Props, State> {
 					resources: parsedResources
 				});
 			} else {
-				alert('Error getting resource data! Handle this properly!');
-				this.props.handleShowAlert('error', 'Error getting class data.');
+				this.props.handleShowAlert('error', 'Error getting resource data.');
 			}
 		});
 	}

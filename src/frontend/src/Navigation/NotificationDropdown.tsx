@@ -11,6 +11,7 @@ const uuid = require('uuid/v4');
 const request = require('superagent');
 
 interface Props {
+	handleShowAlert: Function;
 	cwid: number;
 	role: string;
 }
@@ -79,8 +80,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 			else
 				this.setState({ notifications: notificationData[0], loading: false });
 		}).catch(() => {
-			alert('Error getting notification data, handle properly!');
-			// TODO: handle this properly!
+			this.props.handleShowAlert('error', 'Error getting notification data.');
 		});
 	}
 
@@ -552,13 +552,10 @@ export class NotificationDropdown extends React.Component<Props, State> {
 						this.setState({ overrideRequests: overrideRequests, open: false, overrideRequestLoading: false });
 					else
 						this.setState({ overrideRequests: overrideRequests, overrideRequestLoading: false });
-				} else
-					alert('failed deleting override request. Handle properly!');
-				// TODO: handle this failed error properly
+				}
 			});
 		}).catch(() => {
-			alert('failed while granting override request. Handle properly!');
-			// TODO: handle this failed error properly
+			this.props.handleShowAlert('error', 'Error granting override request.');
 		});
 	}
 
@@ -573,8 +570,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 
 		request.delete('/api/recurringeventrelations').set('queryData', queryDataString).end((error: {}, res: any) => {
 			if (!(res && res.body))
-				alert('error removing recurrence relation from db');
-			// TODO: handle this properly
+				this.props.handleShowAlert('error', 'Error submitting data.');
 		});
 	}
 
@@ -626,9 +622,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 		};
 		let queryDataString = JSON.stringify(queryData);
 		request.put('/api/notifications').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (!res || !res.body)
-				alert('sending denied override request notification failed! Handle this properly!');
-			// TODO: handle this error properly
+			// do nothing
 		});
 	}
 
@@ -655,9 +649,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 		};
 		let queryDataString = JSON.stringify(queryData);
 		request.put('/api/notifications').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (!res || !res.body)
-				alert('sending denied override request notification failed! Handle this properly!');
-			// TODO: handle this error properly
+			// do nothing
 		});
 	}
 
@@ -677,8 +669,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 					else
 						this.setState({ overrideRequests: overrideRequests });
 				} else
-					alert('failed');
-				// TODO: handle this failed message
+					this.props.handleShowAlert('error', 'Error denying override request.');
 			});
 		} else if (this.props.role === 'instructor') {
 			let queryData = {
@@ -704,8 +695,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 					else
 						this.setState({ overrideRequests: overrideRequests });
 				} else
-					alert('failed');
-				// TODO: handle this failed message
+					this.props.handleShowAlert('error', 'Error denying override request.');
 			});
 		}
 	}
@@ -734,9 +724,7 @@ export class NotificationDropdown extends React.Component<Props, State> {
 		};
 		let queryDataString = JSON.stringify(queryData);
 		request.put('/api/notifications').set('queryData', queryDataString).end((error: {}, res: any) => {
-			if (!res || !res.body)
-				alert('sending denied override request notification failed! Handle this properly!');
-			// TODO: handle this error properly
+			// do nothing
 		});
 	}
 

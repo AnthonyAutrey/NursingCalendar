@@ -95,9 +95,6 @@ export class Notification extends React.Component<Props, {}> {
 		request.post('/api/overriderequests').set('queryData', queryDataString).end((error: {}, res: any) => {
 			if (res && res.body)
 				this.deleteNotification();
-			else
-				alert('failed');
-			// TODO: handle this failed message
 		});
 	}
 
@@ -124,8 +121,7 @@ export class Notification extends React.Component<Props, {}> {
 			this.deleteOverrideRequestFromDB().then(() => {
 				this.deleteNotification();
 			}).catch(() => {
-				alert('Error deleting override request!, Handle Properly!');
-				// TODO: handle properly!
+				// do nothing
 			});
 		else
 			this.deleteNotification();
