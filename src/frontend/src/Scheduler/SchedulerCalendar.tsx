@@ -1217,10 +1217,15 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 			}).then((allDBEventIDsForRoom: number[]) => {
 				let clientEventIDs: number[] = Array.from(this.state.events.keys()).map(id => { return Number(id); });
 				let eventsIDsToDelete: number[] = [];
+				let eventsToDelete: Event[] = [];
 
 				allDBEventIDsForRoom.forEach(id => {
-					if (!clientEventIDs.includes(id))
+					if (!clientEventIDs.includes(id)) {
 						eventsIDsToDelete.push(Number(id));
+						let event = this.eventCache.get(Number(id));
+						if (event)
+							eventsToDelete.push(event);
+					}
 				});
 
 				if (eventsIDsToDelete.length > 0) {
@@ -1243,7 +1248,10 @@ export class SchedulerCalendar extends React.Component<Props, State> {
 					let queryDataString = JSON.stringify(queryData);
 					request.delete('/api/events').set('queryData', queryDataString).end((error: {}, res: any) => {
 						if (res && res.body) {
-							this.logEventDeletions(eventsIDsToDelete);
+							let eventIDsExcludingRecurrences = this.exludeDuplicateRecurringEvents(eventsToDelete).map(event => {
+								return event.id;
+							});
+							this.logEventDeletions(eventIDsExcludingRecurrences);
 							this.sendNotificationsToOwnersIfDeletedByNonOwner(eventsIDsToDelete);
 							resolveOuter();
 						} else

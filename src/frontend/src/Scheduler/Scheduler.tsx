@@ -113,7 +113,11 @@ export class Scheduler extends React.Component<Props, State> {
 				<div className="Scheduler container-fluid">
 					<div className="row">
 						<div className="col-md-3 mb-3 d-print-none d-none d-md-block" ref={(container) => { this.roomComponentContainer = container; }}>
-							<RoomFilter container={this.roomComponentContainer} filterChangeHandler={this.filterChangeHandler} />
+							<RoomFilter
+								container={this.roomComponentContainer}
+								filterChangeHandler={this.filterChangeHandler}
+								handleShowAlert={this.props.handleShowAlert}
+							/>
 							<RoomSelector
 								rooms={this.state.rooms}
 								selectedRoom={selectedRoom}
